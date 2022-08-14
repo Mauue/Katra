@@ -1,9 +1,9 @@
 package verifier;
 
+import verifier.widget.HeaderSet;
 import verifier.widget.IPPrefix;
 import verifier.widget.Range;
 import jdd.bdd.BDD;
-import verifier.widget.HeaderSet;
 
 import java.util.*;
 
@@ -70,7 +70,7 @@ public class HeaderType {
     }
     private int encodePrefix(long ipaddr, int prefixlen, int[] vars, int bits) {
 
-        int[] ipbin = Util.CalBinRep(ipaddr, bits);
+        int[] ipbin = Util.calBinRep(ipaddr, bits);
         int[] ipbinprefix = new int[prefixlen];
         for (int k = 0; k < prefixlen; k++) {
             ipbinprefix[k] = ipbin[k + bits - prefixlen];
@@ -86,10 +86,10 @@ public class HeaderType {
         int tempnode = 1;
         for (int i = 0; i < prefix.length; i++) {
             if (i == 0) {
-                tempnode = EncodingVar(vars[bits - prefix.length + i],
+                tempnode = encodingVar(vars[bits - prefix.length + i],
                         prefix[i]);
             } else {
-                int tempnode2 = EncodingVar(vars[bits - prefix.length + i],
+                int tempnode2 = encodingVar(vars[bits - prefix.length + i],
                         prefix[i]);
                 int tempnode3 = bdd.ref(bdd.and(tempnode, tempnode2));
                 tempnode = tempnode3;
@@ -98,7 +98,7 @@ public class HeaderType {
         return tempnode;
     }
 
-    private int EncodingVar(int var, int flag) {
+    private int encodingVar(int var, int flag) {
         if (flag == 0) {
             int tempnode = bdd.not(var);
             // no need to ref the negation of a variable.

@@ -3,7 +3,6 @@ import verifier.check.LoopCheck;
 import verifier.transformation.Transformation;
 import verifier.widget.HeaderSet;
 import verifier.widget.IPPrefix;
-import verifier.widget.Range;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,10 +19,10 @@ public class Example {
         NetworkVerifier nv = new NetworkVerifier(headerType);
 
         // build the network topology
-        List<Node> nodes = nv.GetOrAddNodes("n1", "n2");
+        List<Node> nodes = nv.getOrAddNodes("n1", "n2");
         Node n1 = nodes.get(0);
         Node n2 = nodes.get(1);
-        List<Edge> edges = nv.GetOrAddBiEdge(n1, n2);
+        List<Edge> edges = nv.getOrAddBiEdge(n1, n2);
         Edge e12 = edges.get(0);
         Edge e21 = edges.get(1);
 
@@ -40,9 +39,9 @@ public class Example {
         Map<String, IPPrefix> ipPrefixMap = new HashMap<>();
         ipPrefixMap.put("dstip", new IPPrefix(10<<24, 8));
         HeaderSet r = nv.createPrefix(ipPrefixMap);
-        Transformation t = nv.seq(nv.push(), nv.set("dstip", 10));
+        Transformation t = nv.getTSeq(nv.getTPush(), nv.getTSet("dstip", 10));
         Rule r1 = new Rule(100, e12, r, t);
-        Rule r2 = new Rule(100, e21, r, nv.pop());
+        Rule r2 = new Rule(100, e21, r, nv.getTPop());
 
         // find violations from adding rules.
         Violation violation1 = nv.addRule(r1);

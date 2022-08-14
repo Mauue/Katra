@@ -20,7 +20,7 @@ public class Util {
      * return the binary representation of num
      * e.g. num = 10, bits = 4, return an array of {0,1,0,1}
      */
-    public static int[] CalBinRep(long num, int bits)
+    public static int[] calBinRep(long num, int bits)
     {
         if(bits == 0) return new int[0];
 

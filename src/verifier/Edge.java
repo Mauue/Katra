@@ -10,4 +10,12 @@ public class Edge {
         this.end = end;
         this.nv = begin.getNv();
     }
+
+    public Node src(){
+        return begin;
+    }
+
+    public Node tgt(){
+        return end;
+    }
 }

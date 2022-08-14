@@ -7,6 +7,9 @@ public class HeaderSet {
     HeaderType ht;
     NetworkVerifier nv;
     int content;
+
+    // todo: a multi-dimensional bounding box??
+    int box;
     public HeaderSet(HeaderType ht, int content){
         this.ht = ht;
         this.content = content;
