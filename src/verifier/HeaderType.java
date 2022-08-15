@@ -1,14 +1,15 @@
 package verifier;
 
-import verifier.widget.HeaderSet;
-import verifier.widget.IPPrefix;
-import verifier.widget.Range;
+import verifier.util.IPPrefix;
+import verifier.util.PacketSet;
+import verifier.util.Range;
 import jdd.bdd.BDD;
+import verifier.util.Utility;
 
 import java.util.*;
 
 public class HeaderType {
-    BDD bdd;
+    public BDD bdd;
 
     NetworkVerifier nv;
     LinkedHashMap<String, Integer> elements;
@@ -31,7 +32,20 @@ public class HeaderType {
 
     }
 
-    public HeaderSet createRange(Map<String, Range> ranges){
+    public PacketSet createSingle(Map<String, Integer> s){
+        int result = 1;
+        for(Map.Entry<String, Integer> entry: s.entrySet()) {
+            String name = entry.getKey();
+            if(elements.containsKey(name)){
+                int[] varsArray = elementsVar.get(name);
+                int i = entry.getValue();
+                int temp = encodeSingle(i, varsArray, elements.get(name));
+                result = bdd.andTo(result, temp);
+            }
+        }
+        return new PacketSet(this, result);
+    }
+    public PacketSet createRange(Map<String, Range> ranges){
         // TODO
         for(Map.Entry<String, Range> entry: ranges.entrySet()){
             if(elements.containsKey(entry.getKey())){
@@ -41,7 +55,7 @@ public class HeaderType {
         return null;
     }
 
-    public HeaderSet createPrefix(Map<String, IPPrefix> p){
+    public PacketSet createPrefix(Map<String, IPPrefix> p){
         int result = 1;
         for(Map.Entry<String, IPPrefix> entry: p.entrySet()){
             String name = entry.getKey();
@@ -52,7 +66,7 @@ public class HeaderType {
                 result = bdd.andTo(result, temp);
             }
         }
-        return new HeaderSet(this, result);
+        return new PacketSet(this, result);
     }
 
     public void setNv(NetworkVerifier nv){
@@ -68,9 +82,24 @@ public class HeaderType {
             vars[i] = bdd.createVar();
         }
     }
+
+    private int encodeSingle(long values, int[] vars, int bits) {
+        int[] binRep = Utility.calBinRep(values, bits);
+        int tempnode = 1;
+        for (int i = 0; i < bits; i++) {
+            if (i == 0) {
+                tempnode = encodingVar(vars[i], binRep[i]);
+            } else {
+                int tempnode2 = encodingVar(vars[i], binRep[i]);
+                int tempnode3 = bdd.ref(bdd.and(tempnode, tempnode2));
+                tempnode = tempnode3;
+            }
+        }
+        return tempnode;
+    }
     private int encodePrefix(long ipaddr, int prefixlen, int[] vars, int bits) {
 
-        int[] ipbin = Util.calBinRep(ipaddr, bits);
+        int[] ipbin = Utility.calBinRep(ipaddr, bits);
         int[] ipbinprefix = new int[prefixlen];
         for (int k = 0; k < prefixlen; k++) {
             ipbinprefix[k] = ipbin[k + bits - prefixlen];

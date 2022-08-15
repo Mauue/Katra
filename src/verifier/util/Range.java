@@ -1,4 +1,4 @@
-package verifier.widget;
+package verifier.util;
 
 public class Range {
     int min;

@@ -1,10 +1,8 @@
-package verifier.widget;
+package verifier.util;
 
 import verifier.Node;
 import verifier.PEC;
-import verifier.Sequence;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 

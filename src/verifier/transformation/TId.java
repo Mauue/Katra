@@ -2,17 +2,15 @@ package verifier.transformation;
 
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
-import verifier.util.LocatedPacket;
 
-public class TPush extends Transformation{
-    public TPush(NetworkVerifier nv) {
+public class TId extends Transformation{
+    public TId(NetworkVerifier nv) {
         super(nv);
     }
 
     @Override
     public HeaderStack transform(HeaderStack s) {
-        LocatedPacket lp = s.top();
-        return s.link(lp);
+        return s;
     }
 
     @Override

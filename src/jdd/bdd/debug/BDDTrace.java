@@ -359,7 +359,7 @@ public class BDDTrace {
 	// -----------------------------------------------------
 	private void show_code() {
 		JDDConsole.out.println("import org.sf.javabdd.*;\n"+
-			"public class verifier.Test {\n"+
+			"public class Test {\n"+
     		"public static void main(String[] args) {\n");
 
 		JDDConsole.out.println("\n\n" +
@@ -637,7 +637,7 @@ public class BDDTrace {
 
 		// ------------------------ build permutations
 		int size = variables.size();
-		// verifier.Test.checkEquality( size%2, 0, "odd varcount ??");
+		// Test.checkEquality( size%2, 0, "odd varcount ??");
 		int [] v1  = new int[size /2];
 		int [] v2  = new int[size /2];
 

@@ -1,26 +1,21 @@
 package verifier.transformation;
 
-import verifier.NetworkVerifier;
 import verifier.HeaderStack;
+import verifier.NetworkVerifier;
 
-public class TSet extends Transformation{
-    String name;
-    int value;
-    public TSet(NetworkVerifier nv, String name, int value) {
+public class TTtl extends Transformation{
+    public TTtl(NetworkVerifier nv) {
+        // todo
         super(nv);
-        this.name = name;
-        this.value = value;
     }
 
     @Override
     public HeaderStack transform(HeaderStack s) {
-        //todo
         return null;
     }
 
     @Override
     public boolean equals(Object obj) {
-        //todo
         return false;
     }
 }

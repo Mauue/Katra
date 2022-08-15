@@ -1,10 +1,10 @@
 package verifier.check;
 
-import verifier.widget.HeaderSet;
+import verifier.util.PacketSet;
 
 public class LoopCheck extends Check {
 
-    public LoopCheck(HeaderSet hs) {
-        super(hs);
+    public LoopCheck(PacketSet p) {
+        super(p);
     }
 }

@@ -1,14 +1,19 @@
 package verifier.transformation;
 
 import verifier.NetworkVerifier;
-import verifier.Sequence;
+import verifier.HeaderStack;
 
 public abstract class Transformation {
+
+    final static String name = "abstract";
     NetworkVerifier nv;
 
     public Transformation(NetworkVerifier nv){
         this.nv = nv;
     }
 
-    public abstract Sequence transform(Sequence s);
+    public abstract HeaderStack transform(HeaderStack s);
+
+    @Override
+    public abstract boolean equals(Object obj);
 }

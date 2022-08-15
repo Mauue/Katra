@@ -1,6 +1,6 @@
-package verifier;
+package verifier.util;
 
-public class Util {
+public class Utility {
     public static void main(String[] args) {
     }
     static int[] POWER2;
@@ -39,5 +39,26 @@ public class Util {
             numtemp = numtemp - abit;
         }
         return binrep;
+    }
+
+    /**
+     * 将 ip 字符串转换为 int 类型的数字
+     * <p>
+     * 思路就是将 ip 的每一段数字转为 8 位二进制数，并将它们放在结果的适当位置上
+     *
+     * @param ipString ip字符串，如 127.0.0.1
+     * @return ip字符串对应的 int 值
+     */
+    public static long ip2Int(String ipString) {
+        // 取 ip 的各段
+        String[] ipSlices = ipString.split("\\.");
+        long rs = 0;
+        for (int i = 0; i < ipSlices.length; i++) {
+            // 将 ip 的每一段解析为 int，并根据位置左移 8 位
+            int intSlice = Integer.parseInt(ipSlices[i]) << (8 * (ipSlices.length - i -1));
+            // 求与
+            rs = rs | intSlice;
+        }
+        return rs;
     }
 }

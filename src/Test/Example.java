@@ -1,14 +1,16 @@
+package Test;
+
 import verifier.*;
 import verifier.check.LoopCheck;
 import verifier.transformation.Transformation;
-import verifier.widget.HeaderSet;
-import verifier.widget.IPPrefix;
+import verifier.util.IPPrefix;
+import verifier.util.PacketSet;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// Implement Example API in Figure 6
+// Implement example API in Figure 6
 public class Example {
     public static void main(String[] args) {
         Map<String, Integer> headerSettings = new HashMap<>();
@@ -34,11 +36,12 @@ public class Example {
 //        Map<String, Range> rangeMap = new HashMap<>();
 //        rangeMap.put("srcip", new Range(0, Integer.MAX_VALUE));
 //        rangeMap.put("dstip", new Range(10, 20));
-//        HeaderSet r = nv.createRange(rangeMap);
+//        int r = nv.createRange(rangeMap);
 
         Map<String, IPPrefix> ipPrefixMap = new HashMap<>();
         ipPrefixMap.put("dstip", new IPPrefix(10<<24, 8));
-        HeaderSet r = nv.createPrefix(ipPrefixMap);
+        PacketSet r = nv.createPrefix(ipPrefixMap);
+
         Transformation t = nv.getTSeq(nv.getTPush(), nv.getTSet("dstip", 10));
         Rule r1 = new Rule(100, e12, r, t);
         Rule r2 = new Rule(100, e21, r, nv.getTPop());

@@ -3,24 +3,18 @@ package verifier.transformation;
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
 
-public class TSet extends Transformation{
-    String name;
-    int value;
-    public TSet(NetworkVerifier nv, String name, int value) {
+public class TDrop extends Transformation{
+    public TDrop(NetworkVerifier nv) {
         super(nv);
-        this.name = name;
-        this.value = value;
     }
 
     @Override
     public HeaderStack transform(HeaderStack s) {
-        //todo
         return null;
     }
 
     @Override
     public boolean equals(Object obj) {
-        //todo
-        return false;
+        return obj.getClass() == this.getClass();
     }
 }

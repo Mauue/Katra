@@ -2,44 +2,6 @@ package verifier;
 
 import java.util.ArrayList;
 
-class TrieNode {
-    ArrayList<Rule> rules;
-    TrieNode left, right;
-
-    public TrieNode() {
-        rules = new ArrayList<>();
-        left = right = null;
-    }
-
-    public TrieNode getNext(int flag) {
-        if (flag == 0) {
-            if (this.left == null) {
-                this.left = new TrieNode();
-            }
-            return this.left;
-        } else {
-            if (this.right == null) {
-                this.right = new TrieNode();
-            }
-            return this.right;
-        }
-    }
-
-    public void add(Rule rule) {
-        this.rules.add(rule);
-    }
-
-    public ArrayList<Rule> getRules() {
-        return this.rules;
-    }
-
-    public void explore(ArrayList<Rule> ret) {
-        if (this.left != null) this.left.explore(ret);
-        if (this.right != null) this.right.explore(ret);
-        ret.addAll(this.getRules());
-    }
-}
-
 public class Trie {
     TrieNode root;
 
@@ -67,5 +29,41 @@ public class Trie {
         t.add(rule);
         return ret;
     }
+    static class TrieNode {
+        ArrayList<Rule> rules;
+        TrieNode left, right;
 
+        public TrieNode() {
+            rules = new ArrayList<>();
+            left = right = null;
+        }
+
+        public TrieNode getNext(int flag) {
+            if (flag == 0) {
+                if (this.left == null) {
+                    this.left = new TrieNode();
+                }
+                return this.left;
+            } else {
+                if (this.right == null) {
+                    this.right = new TrieNode();
+                }
+                return this.right;
+            }
+        }
+
+        public void add(Rule rule) {
+            this.rules.add(rule);
+        }
+
+        public ArrayList<Rule> getRules() {
+            return this.rules;
+        }
+
+        public void explore(ArrayList<Rule> ret) {
+            if (this.left != null) this.left.explore(ret);
+            if (this.right != null) this.right.explore(ret);
+            ret.addAll(this.getRules());
+        }
+    }
 }

@@ -3,10 +3,7 @@ package verifier;
 import verifier.check.Check;
 import verifier.transformation.*;
 import verifier.transformation.TSet;
-import verifier.widget.HeaderSet;
-import verifier.widget.IPPrefix;
-import verifier.widget.LocatedPacket;
-import verifier.widget.Range;
+import verifier.util.*;
 
 import java.util.*;
 
@@ -15,6 +12,9 @@ public class NetworkVerifier {
     Map<String, Node> nodes;
     List<Check> checks;
     List<Rule> rules;
+
+    Collection<PEC> pecs;
+
     public NetworkVerifier(HeaderType ht){
         headerType = ht;
         headerType.setNv(this);
@@ -23,11 +23,15 @@ public class NetworkVerifier {
         rules = new LinkedList<>();
     }
 
-    public HeaderSet createRange(Map<String, Range> r){
+    public PacketSet createRange(Map<String, Range> r){
         return headerType.createRange(r);
     }
-    public HeaderSet createPrefix(Map<String, IPPrefix> p){
+    public PacketSet createPrefix(Map<String, IPPrefix> p){
         return headerType.createPrefix(p);
+    }
+
+    public PacketSet createSingle(Map<String, Integer> r){
+        return headerType.createSingle(r);
     }
 
     public List<Node> getOrAddNodes(String... nodes){
@@ -54,8 +58,8 @@ public class NetworkVerifier {
         return Arrays.asList(edge12, edge21);
     }
 
-    public HeaderSet allHeaders(){
-        return new HeaderSet(headerType, 1);
+    public PacketSet allHeaders(){
+        return new PacketSet(headerType, 1);
     }
 
     public void addCheck(Check check){
@@ -66,6 +70,17 @@ public class NetworkVerifier {
         return new TPop(this);
     }
 
+    public Transformation getTDrop(){
+        return new TDrop(this);
+    }
+
+    public Transformation getTTtl(){
+        return new TTtl(this);
+    }
+
+    public Transformation getTDelv(){
+        return new TDelv(this);
+    }
     public Transformation getTPush(){
         return new TPush(this);
     }
@@ -78,13 +93,8 @@ public class NetworkVerifier {
         return new TSeq(this, transformations);
     }
 
-    public Rule match(Node u, HeaderSet h){
-        // TODO
-        return null;
-    }
-
-    public Rule match(Node u, PEC pec){
-        // TODO
+    public Rule forward(Node u, PEC pec){
+        // todo
         return null;
     }
 
@@ -94,10 +104,47 @@ public class NetworkVerifier {
         return v;
     }
 
+    public void addRules(Rule... rule){
+//        Violation v = new Violation(rule);
+        rules.addAll(Arrays.asList(rule));
+    }
+
+    public void calInitPEC(){
+        Comparator<Rule> comp = (Rule lhs, Rule rhs) -> {
+            // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
+            if (lhs.getPriority() > rhs.getPriority()) return -1;
+            if (lhs.getPriority() < rhs.getPriority()) return 1;
+
+//            if (lhs.getDstIp() > rhs.getDstIp()) return -1;
+//            if (lhs.getDstIp() < rhs.getDstIp()) return 1;
+
+            if (lhs.getEdge().hashCode() > rhs.getEdge().hashCode()) return -1;
+            if (lhs.getEdge().hashCode() < rhs.getEdge().hashCode()) return 1;
+
+            if (lhs.getNode().hashCode() ==  lhs.getNode().hashCode()) return 0;
+            if (lhs.getNode().hashCode() <  lhs.getNode().hashCode()) {
+                return -1;
+            } else {
+                return 1;
+            }
+        };
+
+        Collections.sort(rules, comp);
+        // WARNING: the delta of a mini-batch is based on the very initial state,
+        // i.e., change of any rule in the batch is not allowed;
+        // Although sorting in descending order of priority can achieve the goal,
+        // this may not be the best implementation.
+        Changes changes = new Changes(headerType);
+        for (Rule rule : rules) {
+            identifyChangesInsert(rule, changes);
+        }
+        // todo
+
+    }
     public Trace checkProperty(PEC pec, Collection<Node> source){
         List<VNode> visited = new LinkedList<>();
         for(Node s: source){
-            VNode u = new VNode(s, pec, new Sequence(this, s, pec));
+            VNode u = new VNode(s, pec, new HeaderStack(this, s, pec));
             if(!visited.contains(u)){
                 u.previous = null;
                 Trace trace = dfs(visited, u, 0);
@@ -109,10 +156,10 @@ public class NetworkVerifier {
     }
 
     private Trace dfs(List<VNode> visited, VNode u, int i){
-        Rule r = match(u.getLoc(), u.getEc());
+        Rule r = forward(u.getLoc(), u.getEc());
         Edge e = r.getEdge();
         Transformation t = r.getModify();
-        Sequence s = t.transform(u.getStack());
+        HeaderStack s = t.transform(u.getStack());
 
         if (s == null) {
             if(checkProperty()){
@@ -125,7 +172,7 @@ public class NetworkVerifier {
         List<Hop> nextHops = new LinkedList<>();
         Collection<PEC> overlappingEcs = getOverlappingEcs(s.top());
         for(PEC pec: overlappingEcs){
-            Sequence sp = s.bot().link(s.top().and(pec));
+            HeaderStack sp = s.bot().link(s.top().and(pec));
             if(!sp.top().equals(s.top()) || s.getLen() != sp.getLen()){
                 sp.repair();
             }
@@ -152,6 +199,31 @@ public class NetworkVerifier {
         return null;
     }
 
+    public void identifyChangesInsert(Rule rule, Changes changes) {
+//        int entryBdd = this.model.bddEngine.encodeDstIPPrefix(rule.getDstIp(), rule.getPriority());
+//        rule.setNMatch(bdd.ref(bdd.not(entryBdd)));
+//        rule.setHit(entryBdd);
+
+        Node node = rule.getNode();
+        for (Rule r : node.addAndGetAllUntil(rule)) {
+            if (r.getPriority() > rule.getPriority()) {
+                PacketSet newHit =rule.getHit().and(r.getMatch());
+
+                rule.setHit(newHit);
+            }
+
+            if (rule.getHit().isEmpty()) return;
+
+            if (r.getPriority() < rule.getPriority()) {
+                PacketSet intersection = r.getHit().and(rule.getHit());
+                if (!r.hasSameForwardingBehavior(rule)) changes.add(intersection, new Behavior(r.getEdge(), r.modify), new Behavior(rule.getEdge(), rule.modify));
+
+                PacketSet tmp = intersection.not();
+                PacketSet newHit = r.getHit().and(tmp);
+                r.setHit(newHit);
+            }
+        }
+    }
     private boolean hasLoop(VNode u, Collection<VNode> visited){
         //todo
         return false;
@@ -169,13 +241,13 @@ public class NetworkVerifier {
     static class VNode{
         Node u;
         PEC pec;
-        Sequence sequence;
+        HeaderStack headerStack;
 
         Hop previous;
-        VNode(Node u, PEC pec, Sequence sequence){
+        VNode(Node u, PEC pec, HeaderStack headerStack){
             this.u = u;
             this.pec = pec;
-            this.sequence = sequence;
+            this.headerStack = headerStack;
         }
 
         Node getLoc(){
@@ -186,8 +258,8 @@ public class NetworkVerifier {
             return pec;
         }
 
-        Sequence getStack(){
-            return sequence;
+        HeaderStack getStack(){
+            return headerStack;
         }
 
         Trace getTrace(){

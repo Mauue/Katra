@@ -1,7 +1,7 @@
 package verifier.transformation;
 
 import verifier.NetworkVerifier;
-import verifier.Sequence;
+import verifier.HeaderStack;
 
 public class TPop extends Transformation{
 
@@ -10,7 +10,12 @@ public class TPop extends Transformation{
     }
 
     @Override
-    public Sequence transform(Sequence s) {
-        return null;
+    public HeaderStack transform(HeaderStack s) {
+        return s.bot();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj.getClass() == this.getClass();
     }
 }
