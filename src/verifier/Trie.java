@@ -4,16 +4,19 @@ import java.util.ArrayList;
 
 public class Trie {
     TrieNode root;
+    ArrayList<Rule> rules;
 
+    boolean notPrefix;
     public Trie() {
         this.root = new TrieNode();
+        rules = new ArrayList<>();
+        notPrefix = false;
     }
 
     public ArrayList<Rule> addAndGetAllOverlappingWith(Rule rule) {
         TrieNode t = this.root;
-
+        if(!rule.isPrefix || notPrefix) return _addAndGetAllOverlappingWith(rule);
         ArrayList<Rule> ret = new ArrayList<>(t.getRules());
-        if(!rule.isPrefix) return null;
 
         long dstIp = rule.ip;
         long bit = 1L << 31;
@@ -27,7 +30,18 @@ public class Trie {
 
         t.explore(ret);
         t.add(rule);
+        rules.add(rule);
         return ret;
+    }
+
+    private ArrayList<Rule> _addAndGetAllOverlappingWith(Rule rule) {
+        ArrayList<Rule> result = new ArrayList<>();
+        for(Rule rule1: rules){
+            if(rule.match.hasOverlap(rule1.match)) result.add(rule1);
+        }
+        rules.add(rule);
+        notPrefix = true;
+        return result;
     }
     static class TrieNode {
         ArrayList<Rule> rules;

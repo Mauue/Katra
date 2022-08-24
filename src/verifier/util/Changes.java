@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class Changes {
     private HashMap<Behavior, HashMap<Behavior, PacketSet>> oldToNewBehavior;
-    private HashMap<PacketSet, ArrayList<Pair<Behavior, Behavior>>> bddToChanges;
+    private HashMap<PacketSet, ArrayList<Change>> psToChange;
     private HeaderType bddEngine;
 
     public Changes(HeaderType bddEngine) {
@@ -31,8 +31,8 @@ public class Changes {
         }
     }
 
-    public HashMap<PacketSet, ArrayList<Pair<Behavior, Behavior>>> getAll() {
-        return bddToChanges;
+    public HashMap<PacketSet, ArrayList<Change>> getAll() {
+        return psToChange;
     }
 
 //    public void releaseBdd() {
@@ -44,16 +44,16 @@ public class Changes {
 //    }
 
     public void aggrBDDs() {
-        bddToChanges = new HashMap<>();
+        psToChange = new HashMap<>();
         for (Map.Entry<Behavior, HashMap<Behavior, PacketSet>> entryI : oldToNewBehavior.entrySet()){
-            Behavior oldBehavior = entryI.getKey();
+            Behavior oldEdge = entryI.getKey();
             for (Map.Entry<Behavior, PacketSet> entryJ : entryI.getValue().entrySet()) {
-                Behavior newBehavior = entryJ.getKey();
+                Behavior newEdge = entryJ.getKey();
                 PacketSet bdd = entryJ.getValue();
-                if (!bddToChanges.containsKey(bdd)) {
-                    bddToChanges.put(bdd, new ArrayList<>());
+                if (!psToChange.containsKey(bdd)) {
+                    psToChange.put(bdd, new ArrayList<>());
                 }
-                bddToChanges.get(bdd).add(new Pair<>(oldBehavior, newBehavior));
+                psToChange.get(bdd).add(new Change(bdd, oldEdge, newEdge));
             }
         }
     }

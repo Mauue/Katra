@@ -17,4 +17,9 @@ public class TDelv extends Transformation{
     public boolean equals(Object obj) {
         return obj.getClass() == this.getClass();
     }
+
+    @Override
+    public String toString() {
+        return "T-delv";
+    }
 }

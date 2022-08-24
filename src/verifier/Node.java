@@ -5,18 +5,24 @@ import java.util.List;
 import java.util.Objects;
 
 public class Node {
+    public static int cnt = 0;
     String name;
     NetworkVerifier nv;
     List<Edge> in;
     List<Edge> out;
 
     private Trie rules;
+
+    public int uid;
     public Node(String name, NetworkVerifier nv){
         this.name = name;
         this.nv = nv;
         in = new ArrayList<>();
         out = new ArrayList<>();
         rules = new Trie();
+
+        uid = cnt;
+        cnt++;
     }
 
     public String getName() {
@@ -37,6 +43,11 @@ public class Node {
 
     public ArrayList<Rule> addAndGetAllUntil(Rule rule) {
         return this.rules.addAndGetAllOverlappingWith(rule);
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 
     @Override

@@ -1,4 +1,4 @@
-package Test;
+package test;
 
 import verifier.*;
 import verifier.check.LoopCheck;

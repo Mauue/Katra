@@ -10,17 +10,27 @@ import java.util.*;
 public class NetworkVerifier {
     HeaderType headerType;
     Map<String, Node> nodes;
+    List<Edge> edges;
     List<Check> checks;
     List<Rule> rules;
 
-    Collection<PEC> pecs;
+    Collection<PacketSet> pecs;
 
+    Map<Behavior, Collection<PacketSet>> predMap;
+    Map<PacketSet, Collection<Behavior>> behaviorMap;
+
+    public HashMap<Edges, PacketSet> portsToPred;
     public NetworkVerifier(HeaderType ht){
         headerType = ht;
         headerType.setNv(this);
         checks = new ArrayList<>();
         nodes = new HashMap<>();
         rules = new LinkedList<>();
+        portsToPred = new HashMap<>();
+        predMap = new HashMap<>();
+        behaviorMap = new HashMap<>();
+        pecs = new HashSet<>();
+        edges = new LinkedList<>();
     }
 
     public PacketSet createRange(Map<String, Range> r){
@@ -32,6 +42,12 @@ public class NetworkVerifier {
 
     public PacketSet createSingle(Map<String, Integer> r){
         return headerType.createSingle(r);
+    }
+
+    public PacketSet createSingle(String name, int value){
+        Map<String, Integer> singleMap = new HashMap<>();
+        singleMap.put(name, value);
+        return headerType.createSingle(singleMap);
     }
 
     public List<Node> getOrAddNodes(String... nodes){
@@ -54,7 +70,8 @@ public class NetworkVerifier {
 
         Edge edge21 = new Edge(n2, n1);
         n2.addEdgeOut(edge21); n1.addEdgeIn(edge21);
-
+        edges.add(edge12);
+        edges.add(edge21);
         return Arrays.asList(edge12, edge21);
     }
 
@@ -66,6 +83,7 @@ public class NetworkVerifier {
         this.checks.add(check);
     }
 
+    public Transformation getTID() {return new TId(this);}
     public Transformation getTPop(){
         return new TPop(this);
     }
@@ -130,16 +148,145 @@ public class NetworkVerifier {
         };
 
         Collections.sort(rules, comp);
+        initializeModelAndRules();
         // WARNING: the delta of a mini-batch is based on the very initial state,
         // i.e., change of any rule in the batch is not allowed;
         // Although sorting in descending order of priority can achieve the goal,
         // this may not be the best implementation.
         Changes changes = new Changes(headerType);
         for (Rule rule : rules) {
+            System.out.println(rule);
             identifyChangesInsert(rule, changes);
         }
-        // todo
+        changes.aggrBDDs();
+        updateChange(changes);
+//         todo
+    }
 
+    public void initializeModelAndRules() {
+
+        Set<Behavior> behaviorSet = new HashSet<>();
+        for(Edge edge: edges){
+            Behavior b = new Behavior(edge, getTID());
+            behaviorSet.add(b);
+            predMap.put(b, new HashSet<>(Collections.singletonList(allHeaders())));
+        }
+        behaviorMap.put(allHeaders(), behaviorSet);
+        pecs.add(allHeaders());
+    }
+
+    public void initializeNewRules(Behavior b) {
+        if (predMap.containsKey(b)) return;
+        predMap.put(b, new HashSet<>(pecs));
+        for (PacketSet p : pecs) {
+            behaviorMap.get(p).add(b);
+        }
+    }
+    private void updateChange(Changes changes){
+        List<Change> cl = new LinkedList<>();
+        for (Map.Entry<PacketSet, ArrayList<Change>> entryI : changes.getAll().entrySet()) {
+            cl.addAll(entryI.getValue());
+//            System.out.println(entryI);
+//            HashSet<Edges> deletion = new HashSet<>();
+//            Edge filterPort = entryI.getValue().get(0).oldEdge;
+//
+//            HashMap<Edges, PacketSet> oldPreds = (HashMap<Edges, PacketSet>) portsToPred.clone();
+//            for (Map.Entry<Edges, PacketSet> entry : oldPreds.entrySet()) {
+//                Edges from = entry.getKey();
+//
+//                if (from.get(filterPort.src().uid) != filterPort) continue;
+//
+//                PacketSet oldBdd = portsToPred.get(from);
+//                PacketSet intersection =oldBdd.and(entryI.getKey());
+//                if (intersection.isEmpty()) continue;
+//
+//                PacketSet newBdd = oldBdd.xor(intersection);
+//                portsToPred.replace(from, newBdd);
+//                if (newBdd.isEmpty()) deletion.add(from);
+//
+//                Edges to = from.replaceArray(entryI.getValue());
+//                if (portsToPred.containsKey(to)) {
+//                    oldBdd = portsToPred.get(to);
+//                    newBdd = oldBdd.xor(intersection);
+//                    portsToPred.replace(to, newBdd);
+//                } else {
+//                    portsToPred.put(new Edges(to.ports), intersection);
+//                }
+//                from.reverseArray(entryI.getValue());
+//            }
+//
+//            for (Edges t : deletion) {
+//                if (portsToPred.get(t).isEmpty()) portsToPred.remove(t);
+//            }
+        }
+        update(cl);
+//        System.out.println(portsToPred);
+    }
+
+    public void update(List<Change> changes){
+        for (Change change:changes){
+            initializeNewRules(change.oldEdge);
+            initializeNewRules(change.newEdge);
+            Map<Behavior, Collection<PacketSet>> pm = new HashMap<>(predMap);
+            for(PacketSet p: pm.get(change.oldEdge)){
+                PacketSet interaction = p.and(change.packetSet);
+                if(!interaction.isEmpty()){
+                    if(!interaction.equals(p)){
+                        split(p, interaction, p.and(change.packetSet.not()));
+                    }
+                    transfer(interaction, change.oldEdge, change.newEdge);
+                    for(PacketSet pp: pm.get(change.newEdge)){
+                        if(!pp.equals(p) && behaviorMap.get(pp).equals(behaviorMap.get(p))){
+                            merge(p, pp, p.or(pp));
+                            break;
+                        }
+                    }
+                    change.packetSet = change.packetSet.and(p.not());
+                }
+            }
+        }
+        System.out.println(pecs.size());
+        System.out.println(pecs);
+    }
+    private void split(PacketSet p, PacketSet p1, PacketSet p2){
+        for(Behavior behavior: behaviorMap.get(p)){
+            Collection<PacketSet> pa = predMap.get(behavior);
+            pa.add(p1);
+            pa.add(p2);
+            pa.remove(p);
+        }
+        behaviorMap.put(p1, behaviorMap.get(p));
+        behaviorMap.put(p2, behaviorMap.get(p));
+        if(pecs.contains(p)){
+            pecs.remove(p);
+            pecs.add(p1);
+            pecs.add(p2);
+        }
+    }
+
+    private void transfer(PacketSet p, Behavior from, Behavior to){
+        predMap.get(from).remove(p);
+        predMap.get(to).add(p);
+        Collection<Behavior> es = behaviorMap.get(p);
+        es.add(to);
+        es.remove(from);
+        pecs.add(p);
+    }
+
+    private void merge(PacketSet p1, PacketSet p2, PacketSet p){
+        for(Behavior edge: behaviorMap.get(p1)){
+            Collection<PacketSet> pa = predMap.get(edge);
+            pa.add(p);
+            pa.remove(p1);
+            pa.remove(p2);
+        }
+
+        behaviorMap.put(p, behaviorMap.get(p1));
+        if(pecs.contains(p1)||pecs.contains(p2)) {
+            pecs.add(p);
+            pecs.remove(p1);
+            pecs.remove(p2);
+        }
     }
     public Trace checkProperty(PEC pec, Collection<Node> source){
         List<VNode> visited = new LinkedList<>();
@@ -203,20 +350,19 @@ public class NetworkVerifier {
 //        int entryBdd = this.model.bddEngine.encodeDstIPPrefix(rule.getDstIp(), rule.getPriority());
 //        rule.setNMatch(bdd.ref(bdd.not(entryBdd)));
 //        rule.setHit(entryBdd);
-
         Node node = rule.getNode();
         for (Rule r : node.addAndGetAllUntil(rule)) {
-            if (r.getPriority() > rule.getPriority()) {
-                PacketSet newHit =rule.getHit().and(r.getMatch());
+            if (r.isPriorityThan(rule)) {
+                PacketSet newHit = rule.getHit().and(r.getMatch().not());
 
                 rule.setHit(newHit);
             }
 
             if (rule.getHit().isEmpty()) return;
 
-            if (r.getPriority() < rule.getPriority()) {
+            if (rule.isPriorityThan(r)) {
                 PacketSet intersection = r.getHit().and(rule.getHit());
-                if (!r.hasSameForwardingBehavior(rule)) changes.add(intersection, new Behavior(r.getEdge(), r.modify), new Behavior(rule.getEdge(), rule.modify));
+                if (!r.hasSameForwardingBehavior(rule)) changes.add(intersection, new Behavior(r), new Behavior(rule));
 
                 PacketSet tmp = intersection.not();
                 PacketSet newHit = r.getHit().and(tmp);

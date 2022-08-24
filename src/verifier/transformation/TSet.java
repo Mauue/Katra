@@ -19,6 +19,11 @@ public class TSet extends Transformation{
     }
 
     @Override
+    public String toString() {
+        return "T-set";
+    }
+
+    @Override
     public boolean equals(Object obj) {
         //todo
         return false;

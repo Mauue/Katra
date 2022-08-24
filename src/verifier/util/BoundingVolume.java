@@ -3,28 +3,28 @@ package verifier.util;
 import java.util.Vector;
 
 public class BoundingVolume {
-    Vector<Integer> min;
-    Vector<Integer> max;
+    public long[] min;
+    public long[] max;
 
     int dimension;
 
-    public BoundingVolume(Vector<Integer> min, Vector<Integer>  max){
-        assert min.size() == max.size();
+    public BoundingVolume(long[] min, long[]  max){
+        assert min.length == max.length;
         this.min = min;
         this.max = max;
-        dimension = min.size();
+        dimension = min.length;
     }
 
     public boolean isIntersection(BoundingVolume bv2){
         assert this.dimension == bv2.dimension;
         for(int i=0; i<dimension;i++){
-            if(!singleDimensionIntersection(min.get(i), max.get(i), bv2.min.get(i), bv2.max.get(i)))
+            if(!singleDimensionIntersection(min[i], max[i], bv2.min[i], bv2.max[i]))
                 return false;
         }
         return true;
     }
 
-    private boolean singleDimensionIntersection(int min1, int max1, int min2, int max2){
-        return !((min1 >max2) || (min2> max1));
+    private boolean singleDimensionIntersection(long min1, long max1, long min2, long max2){
+        return !((min1 >= max2) || (min2 >= max1));
     }
 }

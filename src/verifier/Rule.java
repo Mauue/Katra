@@ -18,6 +18,7 @@ public class Rule {
         this.priority = p;
         this.edge = e;
         this.match = match;
+        this.hit = new PacketSet(match);
         this.modify = t;
         this.nv = e.nv;
     }
@@ -56,11 +57,24 @@ public class Rule {
         return priority;
     }
 
+    public boolean isPriorityThan(Rule r){
+        return priority < r.priority;
+    }
+
     public Transformation getModify() {
         return modify;
     }
 
     public boolean hasSameForwardingBehavior(Rule rule2){
         return this.edge.equals(rule2.edge) && this.modify.equals(rule2.modify);
+    }
+
+    @Override
+    public String toString() {
+        return "Rule{" + + priority +
+                ", " + edge +
+                ", " + match +
+                ", " + modify +
+                '}';
     }
 }

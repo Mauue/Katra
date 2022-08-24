@@ -29,4 +29,9 @@ public class TSeq extends Transformation{
         // todo
         return false;
     }
+
+    @Override
+    public String toString() {
+        return "T-seq";
+    }
 }

@@ -1,4 +1,4 @@
-package Test;
+package test;
 
 import verifier.*;
 import verifier.check.LoopCheck;
@@ -45,14 +45,21 @@ public class Example2 {
         nv.addCheck(new LoopCheck(nv.allHeaders()));
 
         Map<String, IPPrefix> ipPrefixMap = new HashMap<>();
-        ipPrefixMap.put("dstip", new IPPrefix(Utility.ip2Int("10.7.1.0"), 24));
+        ipPrefixMap.put("dstip", new IPPrefix(0x0000000f, 30));
 
         PacketSet dstM = nv.createPrefix(ipPrefixMap);
 
-        Map<String, Integer> singleMap = new HashMap<>();
-        singleMap.put("ttl", 0);
+        dstM.updateBoundingVolume();
 
-        PacketSet ttlM = nv.createSingle(singleMap);
+        PacketSet ttlM = nv.createSingle("ttl", 0);
+        ttlM.updateBoundingVolume();
+
+//        PacketSet t1 = nv.createSingle("ttl", 5);
+//        PacketSet t2 = nv.createSingle("ttl", 8);
+//        PacketSet t3 = nv.createSingle("ttl", 12);
+
+//        PacketSet tf = t1.or(t2).or(t3).and(dstM);
+//        tf.updateBoundingVolume();
 
         PacketSet all = nv.allHeaders();
 
@@ -77,7 +84,7 @@ public class Example2 {
         Rule r7 = new Rule(200, e33, all, delv);
 
         nv.addRules(r0, r1, r2, r3, r4, r5, r6, r7);
-
+//
         nv.calInitPEC();
 
     }

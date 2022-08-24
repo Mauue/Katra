@@ -16,6 +16,11 @@ public class TTtl extends Transformation{
 
     @Override
     public boolean equals(Object obj) {
-        return false;
+        return obj.getClass() == this.getClass();
+    }
+
+    @Override
+    public String toString() {
+        return "T-ttl";
     }
 }
