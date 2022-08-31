@@ -14,6 +14,4 @@ public abstract class Transformation {
 
     public abstract HeaderStack transform(HeaderStack s);
 
-    @Override
-    public abstract boolean equals(Object obj);
 }

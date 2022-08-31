@@ -15,18 +15,16 @@ public class NetworkVerifier {
     List<Rule> rules;
 
     Collection<PacketSet> pecs;
+    Map<Behaviors, PacketSet> predMap;
+    Map<PacketSet, Behaviors> behaviorMap;
 
-    Map<Behavior, Collection<PacketSet>> predMap;
-    Map<PacketSet, Collection<Behavior>> behaviorMap;
 
-    public HashMap<Edges, PacketSet> portsToPred;
     public NetworkVerifier(HeaderType ht){
         headerType = ht;
         headerType.setNv(this);
         checks = new ArrayList<>();
         nodes = new HashMap<>();
         rules = new LinkedList<>();
-        portsToPred = new HashMap<>();
         predMap = new HashMap<>();
         behaviorMap = new HashMap<>();
         pecs = new HashSet<>();
@@ -38,6 +36,13 @@ public class NetworkVerifier {
     }
     public PacketSet createPrefix(Map<String, IPPrefix> p){
         return headerType.createPrefix(p);
+    }
+
+    public PacketSet createPrefix(String name, Long ip, int prefix){
+        IPPrefix ipp = new IPPrefix(ip, prefix);
+        Map<String, IPPrefix> map = new HashMap<>();
+        map.put(name, ipp);
+        return createPrefix(map);
     }
 
     public PacketSet createSingle(Map<String, Integer> r){
@@ -64,32 +69,36 @@ public class NetworkVerifier {
         return result;
     }
 
-    public List<Edge> getOrAddBiEdge(Node n1, Node n2){
+    public Pair<Edge, Edge> getOrAddBiEdge(Node n1, Node n2){
         Edge edge12 = new Edge(n1, n2);
         n1.addEdgeOut(edge12); n2.addEdgeIn(edge12);
-
+        if(n1.equals(n2)) return new Pair<>(edge12, edge12);
         Edge edge21 = new Edge(n2, n1);
         n2.addEdgeOut(edge21); n1.addEdgeIn(edge21);
         edges.add(edge12);
         edges.add(edge21);
-        return Arrays.asList(edge12, edge21);
+        return new Pair<>(edge12, edge21);
     }
 
     public PacketSet allHeaders(){
         return new PacketSet(headerType, 1);
     }
 
+    public PacketSet zeroHeaders(){
+        return new PacketSet(headerType, 0);
+    }
+
     public void addCheck(Check check){
         this.checks.add(check);
     }
 
-    public Transformation getTID() {return new TId(this);}
+    public Transformation getTID() {return TId.getTId(this);}
     public Transformation getTPop(){
-        return new TPop(this);
+        return TPop.getTPop(this);
     }
 
     public Transformation getTDrop(){
-        return new TDrop(this);
+        return TDrop.getTDrop(this);
     }
 
     public Transformation getTTtl(){
@@ -97,23 +106,24 @@ public class NetworkVerifier {
     }
 
     public Transformation getTDelv(){
-        return new TDelv(this);
+        return TDelv.getTDelv(this);
     }
     public Transformation getTPush(){
-        return new TPush(this);
+        return TPush.getTPush(this);
     }
 
-    public Transformation getTSet(String name, int value){
-        return new TSet(this, name, value);
+    public Transformation getTSet(PacketSet p){
+        return new TSet(this, p);
     }
 
     public Transformation getTSeq(Transformation... transformations){
         return new TSeq(this, transformations);
     }
 
-    public Rule forward(Node u, PEC pec){
-        // todo
-        return null;
+    public Behavior forward(Node u, PacketSet pec){
+        Behaviors behaviors = behaviorMap.get(pec);
+
+        return behaviors.get(u.uid);
     }
 
     public Violation addRule(Rule rule){
@@ -125,6 +135,8 @@ public class NetworkVerifier {
     public void addRules(Rule... rule){
 //        Violation v = new Violation(rule);
         rules.addAll(Arrays.asList(rule));
+        for(Rule r: rules)
+            System.out.println(r);
     }
 
     public void calInitPEC(){
@@ -147,151 +159,176 @@ public class NetworkVerifier {
             }
         };
 
-        Collections.sort(rules, comp);
         initializeModelAndRules();
-        // WARNING: the delta of a mini-batch is based on the very initial state,
-        // i.e., change of any rule in the batch is not allowed;
-        // Although sorting in descending order of priority can achieve the goal,
-        // this may not be the best implementation.
-        Changes changes = new Changes(headerType);
+        Collections.sort(rules, comp);
+
+//        List<Behavior> b = new LinkedList<>();
+//        rules.forEach(r->{b.add(new Behavior(r.getEdge(), r.modify));});
+
+//        List<Change> changes = new LinkedList<>();
+//        for(Node node: nodes.values()){
+////            identifyChangesInsert(new Rule(Integer.MAX_VALUE, node.selfEdge, allHeaders(), getTDrop()), changes);
+//            Behavior b = new Behavior(node.selfEdge, getTID());
+//            predMap.put(b, allHeaders());
+//            behaviorMap.get(allHeaders()).add(b);
+//        }
+        Changes changes = new Changes();
         for (Rule rule : rules) {
-            System.out.println(rule);
             identifyChangesInsert(rule, changes);
         }
-        changes.aggrBDDs();
-        updateChange(changes);
-//         todo
+        update2(changes);
     }
 
     public void initializeModelAndRules() {
-
-        Set<Behavior> behaviorSet = new HashSet<>();
-        for(Edge edge: edges){
-            Behavior b = new Behavior(edge, getTID());
-            behaviorSet.add(b);
-            predMap.put(b, new HashSet<>(Collections.singletonList(allHeaders())));
+//        Collection<Behavior> zero = new HashSet<>();
+//        for(Behavior behavior: bs){
+//            if(behavior.t.getClass() == TDrop.class) continue;
+//            predMap.put(behavior, zeroHeaders());
+//            zero.add(behavior);
+//        }
+//        behaviorMap.put(zeroHeaders(), zero);
+//
+//
+//        List<Behavior> behaviors = new LinkedList<>();
+//        for(Node n: nodes.values()){
+//            behaviors.add(new Behavior(n.getSelfEdge(), getTDrop()));
+//        }
+//
+//        Collection<Behavior> all = new HashSet<>();
+//        for(Behavior b: behaviors){
+//            predMap.put(b, allHeaders());
+//            all.add(b);
+//        }
+//        behaviorMap.put(allHeaders(), new HashSet<>(all));
+//        pecs.add(allHeaders());
+        ArrayList<Behavior> ports = new ArrayList<>();
+        for (int i = 0; i < Node.cnt; i ++) ports.add(null);
+        // Initialize each device with default rule sending packets to default device (i.e., black-hole)
+        for (Node node : nodes.values()) {
+            Behavior defaultBehavior = new Behavior(node.selfEdge, getTDrop());
+            Rule r = new Rule(Integer.MAX_VALUE, node.selfEdge, allHeaders(), getTDrop());
+            this.addRule(r);
+            // initializing default rules w/o generating changes
+            ports.set(node.uid, defaultBehavior);
         }
-        behaviorMap.put(allHeaders(), behaviorSet);
-        pecs.add(allHeaders());
+        Behaviors key = new Behaviors(ports);
+        predMap.put(key, allHeaders());
+
     }
 
-    public void initializeNewRules(Behavior b) {
-        if (predMap.containsKey(b)) return;
-        predMap.put(b, new HashSet<>(pecs));
-        for (PacketSet p : pecs) {
-            behaviorMap.get(p).add(b);
-        }
-    }
-    private void updateChange(Changes changes){
-        List<Change> cl = new LinkedList<>();
-        for (Map.Entry<PacketSet, ArrayList<Change>> entryI : changes.getAll().entrySet()) {
-            cl.addAll(entryI.getValue());
-//            System.out.println(entryI);
-//            HashSet<Edges> deletion = new HashSet<>();
-//            Edge filterPort = entryI.getValue().get(0).oldEdge;
-//
-//            HashMap<Edges, PacketSet> oldPreds = (HashMap<Edges, PacketSet>) portsToPred.clone();
-//            for (Map.Entry<Edges, PacketSet> entry : oldPreds.entrySet()) {
-//                Edges from = entry.getKey();
-//
-//                if (from.get(filterPort.src().uid) != filterPort) continue;
-//
-//                PacketSet oldBdd = portsToPred.get(from);
-//                PacketSet intersection =oldBdd.and(entryI.getKey());
-//                if (intersection.isEmpty()) continue;
-//
-//                PacketSet newBdd = oldBdd.xor(intersection);
-//                portsToPred.replace(from, newBdd);
-//                if (newBdd.isEmpty()) deletion.add(from);
-//
-//                Edges to = from.replaceArray(entryI.getValue());
-//                if (portsToPred.containsKey(to)) {
-//                    oldBdd = portsToPred.get(to);
-//                    newBdd = oldBdd.xor(intersection);
-//                    portsToPred.replace(to, newBdd);
-//                } else {
-//                    portsToPred.put(new Edges(to.ports), intersection);
-//                }
-//                from.reverseArray(entryI.getValue());
-//            }
-//
-//            for (Edges t : deletion) {
-//                if (portsToPred.get(t).isEmpty()) portsToPred.remove(t);
-//            }
-        }
-        update(cl);
-//        System.out.println(portsToPred);
-    }
+    public void update2(Changes changes){
+        changes.aggrBDDs();
 
-    public void update(List<Change> changes){
-        for (Change change:changes){
-            initializeNewRules(change.oldEdge);
-            initializeNewRules(change.newEdge);
-            Map<Behavior, Collection<PacketSet>> pm = new HashMap<>(predMap);
-            for(PacketSet p: pm.get(change.oldEdge)){
-                PacketSet interaction = p.and(change.packetSet);
-                if(!interaction.isEmpty()){
-                    if(!interaction.equals(p)){
-                        split(p, interaction, p.and(change.packetSet.not()));
-                    }
-                    transfer(interaction, change.oldEdge, change.newEdge);
-                    for(PacketSet pp: pm.get(change.newEdge)){
-                        if(!pp.equals(p) && behaviorMap.get(pp).equals(behaviorMap.get(p))){
-                            merge(p, pp, p.or(pp));
-                            break;
-                        }
-                    }
-                    change.packetSet = change.packetSet.and(p.not());
+        HashMap<Behaviors, PacketSet> oldPred = (HashMap<Behaviors, PacketSet>)((HashMap<Behaviors, PacketSet>) predMap).clone();
+        Set<Behaviors> deletion = new HashSet<>();
+        for (Map.Entry<PacketSet, ArrayList<Pair<Behavior, Behavior>>> entryI : changes.getAll().entrySet()) {
+//            System.out.println(change);
+            Behavior filterBehavior = entryI.getValue().get(0).getFirst();
+            for(Map.Entry<Behaviors, PacketSet> entry: oldPred.entrySet()){
+                Behaviors from = entry.getKey();
+
+                if(!from.get(filterBehavior.getNode().uid).equals(filterBehavior)) continue;
+
+                PacketSet oldPs = predMap.get(from);
+                PacketSet intersection = oldPs.and(entryI.getKey());
+                if(intersection.isEmpty()) continue;
+
+                PacketSet newPs = oldPs.xor(intersection);
+                predMap.replace(from, newPs);
+                if (newPs.isEmpty()) deletion.add(from);
+
+                Behaviors to = from.replaceArray(entryI.getValue());
+                if (predMap.containsKey(to)) {
+                    oldPs = predMap.get(to);
+                    newPs = oldPs.xor(intersection);
+                    predMap.replace(to, newPs);
+                } else {
+                    predMap.put(new Behaviors(to.behaviors), intersection);
                 }
+
+                from.reverseArray(entryI.getValue());
+            }
+
+            for (Behaviors t : deletion) {
+                if (predMap.get(t).isEmpty()) predMap.remove(t);
             }
         }
-        System.out.println(pecs.size());
-        System.out.println(pecs);
+        predMap.forEach((k, v)-> {behaviorMap.put(v, k); pecs.add(v);});
+        System.out.println(predMap.size());
+        System.out.println(predMap);
     }
-    private void split(PacketSet p, PacketSet p1, PacketSet p2){
-        for(Behavior behavior: behaviorMap.get(p)){
-            Collection<PacketSet> pa = predMap.get(behavior);
-            pa.add(p1);
-            pa.add(p2);
-            pa.remove(p);
-        }
-        behaviorMap.put(p1, behaviorMap.get(p));
-        behaviorMap.put(p2, behaviorMap.get(p));
-        if(pecs.contains(p)){
-            pecs.remove(p);
-            pecs.add(p1);
-            pecs.add(p2);
-        }
-    }
+//    public void update(List<Change> changes){
+//        for (Change change:changes){
+//            System.out.println(change);
+//            PacketSet p = predMap.get(change.oldBehavior);
+//            PacketSet interaction = p.and(change.packetSet);
+//            if(!interaction.isEmpty()){
+//                if(!interaction.equals(p)){
+//                    split(p, interaction, p.and(change.packetSet.not()));
+//                }
+//                transfer(interaction, change.oldBehavior, change.newBehavior);
+//
+//                PacketSet pp = predMap.get(change.newBehavior);
+//                if(!pp.equals(p) && behaviorMap.get(pp).equals(behaviorMap.get(p))){
+//                    merge(p, pp, p.or(pp));
+//                    break;
+//                }
+//
+//                change.packetSet = change.packetSet.and(p.not());
+//            }
+//        }
+//
+//        System.out.println(pecs.size());
+//        System.out.println(pecs);
+//    }
+//    private void split(PacketSet p, PacketSet p1, PacketSet p2){
+////        for(Behavior behavior: behaviorMap.get(p)){
+////            Collection<PacketSet> pa = predMap.get(behavior);
+////            pa.add(p1);
+////            pa.add(p2);
+////            pa.remove(p);
+////        }
+//        behaviorMap.put(p1, behaviorMap.get(p));
+//        behaviorMap.put(p2, behaviorMap.get(p));
+//        if(pecs.contains(p)){
+//            pecs.remove(p);
+//            pecs.add(p1);
+//            pecs.add(p2);
+//        }
+//    }
 
-    private void transfer(PacketSet p, Behavior from, Behavior to){
-        predMap.get(from).remove(p);
-        predMap.get(to).add(p);
-        Collection<Behavior> es = behaviorMap.get(p);
-        es.add(to);
-        es.remove(from);
-        pecs.add(p);
-    }
-
-    private void merge(PacketSet p1, PacketSet p2, PacketSet p){
-        for(Behavior edge: behaviorMap.get(p1)){
-            Collection<PacketSet> pa = predMap.get(edge);
-            pa.add(p);
-            pa.remove(p1);
-            pa.remove(p2);
-        }
-
-        behaviorMap.put(p, behaviorMap.get(p1));
-        if(pecs.contains(p1)||pecs.contains(p2)) {
-            pecs.add(p);
-            pecs.remove(p1);
-            pecs.remove(p2);
-        }
-    }
-    public Trace checkProperty(PEC pec, Collection<Node> source){
+//    private void transfer(PacketSet p, Behavior from, Behavior to){
+//        PacketSet fromPred = predMap.get(from);
+//        predMap.put(from, fromPred.and(p.not()));
+//
+//        PacketSet toPred = predMap.get(to);
+//        predMap.put(to, toPred.or(p));
+//
+//        Collection<Behavior> es = behaviorMap.get(p);
+//        es.add(to);
+//        es.remove(from);
+//        pecs.add(p);
+//    }
+//
+//    private void merge(PacketSet p1, PacketSet p2, PacketSet p){
+////        for(Behavior edge: behaviorMap.get(p1)){
+////            Collection<PacketSet> pa = predMap.get(edge);
+////            pa.add(p);
+////            pa.remove(p1);
+////            pa.remove(p2);
+////        }
+//
+//        behaviorMap.put(p, behaviorMap.get(p1));
+//        if(pecs.contains(p1)||pecs.contains(p2)) {
+//            pecs.add(p);
+//            pecs.remove(p1);
+//            pecs.remove(p2);
+//        }
+//    }
+    public Trace checkProperty(PacketSet pec, Collection<Node> source){
         List<VNode> visited = new LinkedList<>();
         for(Node s: source){
-            VNode u = new VNode(s, pec, new HeaderStack(this, s, pec));
+            VNode u = new VNode(s, pec, new HeaderStack(this, pec));
             if(!visited.contains(u)){
                 u.previous = null;
                 Trace trace = dfs(visited, u, 0);
@@ -303,23 +340,23 @@ public class NetworkVerifier {
     }
 
     private Trace dfs(List<VNode> visited, VNode u, int i){
-        Rule r = forward(u.getLoc(), u.getEc());
-        Edge e = r.getEdge();
-        Transformation t = r.getModify();
+        Behavior b = forward(u.getLoc(), u.getEc());
+        Edge e = b.e;
+        Transformation t = b.t;
         HeaderStack s = t.transform(u.getStack());
 
         if (s == null) {
-            if(checkProperty()){
-                return null;
-            }else{
+            if(satisfyProperty(u, t)){
                 return u.getTrace();
+            }else{
+                return null;
             }
         }
 
         List<Hop> nextHops = new LinkedList<>();
-        Collection<PEC> overlappingEcs = getOverlappingEcs(s.top());
-        for(PEC pec: overlappingEcs){
-            HeaderStack sp = s.bot().link(s.top().and(pec));
+
+        for(PacketSet pec: getOverlappingEcs(s.top())){
+            HeaderStack sp = s.bot().push(s.top().and(pec));
             if(!sp.top().equals(s.top()) || s.getLen() != sp.getLen()){
                 sp.repair();
             }
@@ -362,7 +399,8 @@ public class NetworkVerifier {
 
             if (rule.isPriorityThan(r)) {
                 PacketSet intersection = r.getHit().and(rule.getHit());
-                if (!r.hasSameForwardingBehavior(rule)) changes.add(intersection, new Behavior(r), new Behavior(rule));
+                if(intersection.isEmpty()) continue;
+                if (!r.hasSameForwardingBehavior(rule)) changes.add(intersection, r.getBehavior(), rule.getBehavior());
 
                 PacketSet tmp = intersection.not();
                 PacketSet newHit = r.getHit().and(tmp);
@@ -371,26 +409,68 @@ public class NetworkVerifier {
         }
     }
     private boolean hasLoop(VNode u, Collection<VNode> visited){
-        //todo
+        Collection<VNode> collection = new HashSet<>();
+        visited.forEach(vNode -> {if(vNode.getLoc() == u.getLoc()) collection.add(vNode);});
+        VNode c = u.previous.u;
+        int l = u.headerStack.getLen();
+        while( c != null && !collection.isEmpty()){
+            l = Math.min(l, c.headerStack.getLen());
+            if(collection.contains(c)){
+                collection.remove(c);
+                int gamma = getLongestCommonSuffix(u.headerStack, c.headerStack);
+                if(l>c.headerStack.getLen()-gamma){
+                    return true;
+                }
+            }
+            c = c.previous.u;
+        }
         return false;
     }
-    private Collection<PEC> getOverlappingEcs(LocatedPacket lp){
-        // todo
-        return new LinkedList<>();
+
+    public Collection<PacketSet> getPecs() {
+        return pecs;
     }
 
-    private boolean checkProperty(){
-        // todo
+    private int getLongestCommonSuffix(HeaderStack s1, HeaderStack s2){
+        List<PacketSet> sequence1 = s1.sequences;
+        List<PacketSet> sequence2 = s2.sequences;
+        int res = 0, index1 = sequence1.size()-1, index2 = sequence2.size()-1;
+        while (index1>=0 && index2>=0){
+            if(sequence1.get(index1).equals(sequence2.get(index2))){
+                res++;
+                index2--;
+                index1--;
+            }else break;
+        }
+        return res;
+    }
+    private Collection<PacketSet> getOverlappingEcs(PacketSet header){
+        Collection<PacketSet> res = new LinkedList<>();
+        for(PacketSet pec: pecs){
+            if(pec.hasOverlap(header)){
+                res.add(pec);
+            }
+        }
+        return res;
+    }
+
+    public void printBV(PacketSet ps){
+        headerType.printBV(ps.getBv());
+    }
+    private boolean satisfyProperty(VNode n, Transformation t){
+        for(Check check: checks){
+            if(!check.isSatisfy(n.u, t)) return false;
+        }
         return true;
     }
 
     static class VNode{
         Node u;
-        PEC pec;
+        PacketSet pec;
         HeaderStack headerStack;
 
         Hop previous;
-        VNode(Node u, PEC pec, HeaderStack headerStack){
+        VNode(Node u, PacketSet pec, HeaderStack headerStack){
             this.u = u;
             this.pec = pec;
             this.headerStack = headerStack;
@@ -400,7 +480,7 @@ public class NetworkVerifier {
             return u;
         }
 
-        PEC getEc(){
+        PacketSet getEc(){
             return pec;
         }
 
@@ -409,8 +489,16 @@ public class NetworkVerifier {
         }
 
         Trace getTrace(){
-            // todo
-            return null;
+            VNode n = this;
+            Trace t = new Trace();
+            while (n != null){
+                t.add(n.u, n.getEc());
+                if(n.previous != null)
+                    n = n.previous.u;
+                else
+                    n = null;
+            }
+            return t;
         }
     }
 

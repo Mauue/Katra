@@ -10,9 +10,9 @@ public class HeaderType {
 
     NetworkVerifier nv;
     LinkedHashMap<String, Integer> elements;
-    Map<String, Integer> elementsIndex;
+    Map<String, Integer> elementVarIndex;
     Map<String, int[]> elementsVar;
-
+    Map<String, Integer> elementIndex;
     Map<String, Integer> forallElement; // jdd-forall
 
     int length;
@@ -20,28 +20,30 @@ public class HeaderType {
     public HeaderType(Map<String, Integer> e){
         bdd = new BDD(10000, 10000);
         elements = new LinkedHashMap<>(e);
-        elementsIndex = new HashMap<>();
+        elementVarIndex = new HashMap<>();
         elementsVar = new HashMap<>();
         forallElement = new HashMap<>();
+        elementIndex = new HashMap<>();
         length = 0;
         size = e.size();
         elements.forEach((s, l)-> {
-            elementsIndex.put(s, length);
+            elementVarIndex.put(s, length);
             length += l;
             int[] array = new int[length];
             declareVars(array, length);
             elementsVar.put(s, array);
+            elementIndex.put(s, elementIndex.size());
         });
         int last = 1;
-        elements.forEach((s, l)-> {
-            int res = last;
+        for (Map.Entry<String, Integer> entry : elements.entrySet()) {
+            String s = entry.getKey();
+            forallElement.put(s, last);
             int[] array = elementsVar.get(s);
-            for(Integer i:array){
-                res = bdd.andTo(res, i);
+            for (Integer i : array) {
+                last = bdd.andTo(last, i);
             }
-            bdd.ref(res);
-            forallElement.put(s, res);
-        });
+            bdd.ref(last);
+        }
     }
 
     public PacketSet createSingle(Map<String, Integer> s){
@@ -90,15 +92,17 @@ public class HeaderType {
     }
 
     public BoundingVolume getBoundingVolume(int predicate){
+        if(predicate == 0) return null;
         long[] min = new long[size];
         long[] max = new long[size];
         int i = 0;
-        int cube = 1;
+        int cube;
         for(Map.Entry<String, Integer> entry: elements.entrySet()){
-            predicate = bdd.exists(predicate, cube);
             String name = entry.getKey();
+            cube = forallElement.get(name);
+            predicate = bdd.exists(predicate, cube);
             int len = entry.getValue();
-            int index = elementsIndex.get(name);
+            int index = elementVarIndex.get(name);
 //            if(predicate >= 2){
 //                bdd.print(predicate);
 //                bdd.printSet(predicate);
@@ -106,7 +110,6 @@ public class HeaderType {
             min[i] = findMinRec(predicate, index, index, len, 0L);
             max[i] = findMaxRec(predicate, index, index, len, 0L);
             i++;
-            cube = forallElement.get(name);
         }
         return new BoundingVolume(min, max);
     }
@@ -158,6 +161,30 @@ public class HeaderType {
             i++;
         }
         return sb.toString();
+    }
+
+    public PacketSet ttlDecline(PacketSet ps, String key){
+        BoundingVolume bv = ps.getBv();
+        int index = elementIndex.get(key);
+        long min = bv.min[index];
+        if(min == 0) {
+            System.out.println("ttl decline on 0!");
+            return null;
+        }
+        long max = bv.max[index];
+
+        Map<String, Integer> minMap = new HashMap<>(); minMap.put(key, (int) (min-1));
+        Map<String, Integer> maxMap = new HashMap<>(); minMap.put(key, (int) max);
+        System.out.println(min);
+        System.out.println(max);
+        PacketSet minS = createSingle(minMap);
+        PacketSet maxS = createSingle(maxMap);
+        minS.updateBoundingVolume();
+        maxS.updateBoundingVolume();
+        ps = ps.and(maxS.not());
+        int tmp = bdd.ref(bdd.forall(ps.getPredicate(), forallElement.get(key)));
+        tmp = bdd.ref(bdd.andTo(tmp, minS.getPredicate()));
+        return new PacketSet(this, tmp);
     }
     private void declareVars(int[] vars, int bits) {
         for (int i = 0; i < bits; i++) {

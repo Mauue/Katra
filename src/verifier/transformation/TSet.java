@@ -2,20 +2,18 @@ package verifier.transformation;
 
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
+import verifier.util.PacketSet;
 
 public class TSet extends Transformation{
-    String name;
-    int value;
-    public TSet(NetworkVerifier nv, String name, int value) {
+    PacketSet p;
+    public TSet(NetworkVerifier nv, PacketSet p) {
         super(nv);
-        this.name = name;
-        this.value = value;
+        this.p = p;
     }
 
     @Override
     public HeaderStack transform(HeaderStack s) {
-        //todo
-        return null;
+        return s.pop().push(p);
     }
 
     @Override
@@ -25,7 +23,7 @@ public class TSet extends Transformation{
 
     @Override
     public boolean equals(Object obj) {
-        //todo
-        return false;
+        if(!this.toString().equals(obj.toString())) return false;
+        return p.equals(((TSet)obj).p);
     }
 }

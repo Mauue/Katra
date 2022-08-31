@@ -3,11 +3,18 @@ package verifier.transformation;
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
 
+import java.util.Objects;
+
 public class TDrop extends Transformation{
-    public TDrop(NetworkVerifier nv) {
+    static TDrop object = null;
+    TDrop(NetworkVerifier nv) {
         super(nv);
     }
 
+    public static TDrop getTDrop(NetworkVerifier nv){
+        if(object == null) object = new TDrop(nv);
+        return object;
+    }
     @Override
     public HeaderStack transform(HeaderStack s) {
         return null;
@@ -15,7 +22,12 @@ public class TDrop extends Transformation{
 
     @Override
     public boolean equals(Object obj) {
-        return obj.getClass() == this.getClass();
+        return Objects.equals(obj.toString(), this.toString());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash("drop");
     }
 
     @Override

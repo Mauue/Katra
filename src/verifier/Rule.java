@@ -1,6 +1,7 @@
 package verifier;
 
 import verifier.transformation.Transformation;
+import verifier.util.Behavior;
 import verifier.util.PacketSet;
 
 public class Rule {
@@ -12,8 +13,16 @@ public class Rule {
 
     NetworkVerifier nv;
 
+    Behavior behavior;
     boolean isPrefix = false;
     long ip;
+    int prefix;
+
+    public void setPrefixRule(long ip, int prefix){
+        this.isPrefix = true;
+        this.ip = ip;
+        this.prefix = prefix;
+    }
     public Rule(int p, Edge e, PacketSet match, Transformation t){
         this.priority = p;
         this.edge = e;
@@ -21,6 +30,8 @@ public class Rule {
         this.hit = new PacketSet(match);
         this.modify = t;
         this.nv = e.nv;
+
+        this.behavior = new Behavior(e, t);
     }
 
     public Rule(int p, Edge e, PacketSet match, Transformation t, long ip){
@@ -67,6 +78,10 @@ public class Rule {
 
     public boolean hasSameForwardingBehavior(Rule rule2){
         return this.edge.equals(rule2.edge) && this.modify.equals(rule2.modify);
+    }
+
+    public Behavior getBehavior() {
+        return behavior;
     }
 
     @Override

@@ -3,8 +3,16 @@ package verifier.transformation;
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
 
+import java.util.Objects;
+
 public class TId extends Transformation{
-    public TId(NetworkVerifier nv) {
+    static TId object = null;
+
+    public static TId getTId(NetworkVerifier nv){
+        if(object == null) object = new TId(nv);
+        return object;
+    }
+    TId(NetworkVerifier nv) {
         super(nv);
     }
 
@@ -15,7 +23,7 @@ public class TId extends Transformation{
 
     @Override
     public boolean equals(Object obj) {
-        return obj.getClass() == this.getClass();
+        return Objects.equals(obj.toString(), this.toString());
     }
 
     @Override

@@ -5,6 +5,7 @@ import verifier.check.LoopCheck;
 import verifier.transformation.Transformation;
 import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
+import verifier.util.Pair;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,9 +25,9 @@ public class Example {
         List<Node> nodes = nv.getOrAddNodes("n1", "n2");
         Node n1 = nodes.get(0);
         Node n2 = nodes.get(1);
-        List<Edge> edges = nv.getOrAddBiEdge(n1, n2);
-        Edge e12 = edges.get(0);
-        Edge e21 = edges.get(1);
+        Pair<Edge, Edge> edges = nv.getOrAddBiEdge(n1, n2);
+        Edge e12 = edges.getFirst();
+        Edge e21 = edges.getSecond();
 
         // register the properties we want to monitor
         nv.addCheck(new LoopCheck(nv.allHeaders()));
@@ -42,13 +43,13 @@ public class Example {
         ipPrefixMap.put("dstip", new IPPrefix(10<<24, 8));
         PacketSet r = nv.createPrefix(ipPrefixMap);
 
-        Transformation t = nv.getTSeq(nv.getTPush(), nv.getTSet("dstip", 10));
-        Rule r1 = new Rule(100, e12, r, t);
-        Rule r2 = new Rule(100, e21, r, nv.getTPop());
+//        Transformation t = nv.getTSeq(nv.getTPush(), nv.getTSet("dstip", 10));
+//        Rule r1 = new Rule(100, e12, r, t);
+//        Rule r2 = new Rule(100, e21, r, nv.getTPop());
 
         // find violations from adding rules.
-        Violation violation1 = nv.addRule(r1);
-        Violation violation2 = nv.addRule(r2);
-        assert violation2.getCount() == 1;
+//        Violation violation1 = nv.addRule(r1);
+//        Violation violation2 = nv.addRule(r2);
+//        assert violation2.getCount() == 1;
     }
 }

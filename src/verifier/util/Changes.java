@@ -1,8 +1,6 @@
 package verifier.util;
 
 import jdd.bdd.BDD;
-import verifier.Edge;
-import verifier.HeaderType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,49 +9,41 @@ import java.util.Map;
 
 public class Changes {
     private HashMap<Behavior, HashMap<Behavior, PacketSet>> oldToNewBehavior;
-    private HashMap<PacketSet, ArrayList<Change>> psToChange;
-    private HeaderType bddEngine;
+    private HashMap<PacketSet, ArrayList<Pair<Behavior, Behavior>>> bddToChanges;
 
-    public Changes(HeaderType bddEngine) {
-        this.bddEngine = bddEngine;
+
+    public Changes() {
         oldToNewBehavior = new HashMap<>();
     }
 
-    public void add(PacketSet deltaBdd, Behavior oldBehavior, Behavior newBehavior) {
-        if (!oldToNewBehavior.containsKey(oldBehavior)) oldToNewBehavior.put(oldBehavior, new HashMap<>());
-        HashMap<Behavior, PacketSet> newPortToBdd = oldToNewBehavior.get(oldBehavior);
-        if (newPortToBdd.containsKey(newBehavior)) {
-            PacketSet oldBdd = newPortToBdd.get(newBehavior);
+    public void add(PacketSet deltaBdd, Behavior oldPort, Behavior newPort) {
+        oldToNewBehavior.putIfAbsent(oldPort, new HashMap<>());
+        HashMap<Behavior, PacketSet> newPortToBdd = oldToNewBehavior.get(oldPort);
+        if (newPortToBdd.containsKey(newPort)) {
+            PacketSet oldBdd = newPortToBdd.get(newPort);
             PacketSet union = oldBdd.or(deltaBdd);
-            newPortToBdd.replace(newBehavior, union);
+            newPortToBdd.replace(newPort, union);
         } else {
-            newPortToBdd.put(newBehavior, deltaBdd);
+            newPortToBdd.put(newPort, deltaBdd);
         }
     }
 
-    public HashMap<PacketSet, ArrayList<Change>> getAll() {
-        return psToChange;
+    public HashMap<PacketSet, ArrayList<Pair<Behavior, Behavior>>> getAll() {
+        return bddToChanges;
     }
 
-//    public void releaseBdd() {
-//        for (HashMap<Edge, PacketSet> value : oldToNewPort.values()) {
-//            for (Integer bdd : value.values()) {
-//                bddEngine.bdd.deref(bdd);
-//            }
-//        }
-//    }
 
     public void aggrBDDs() {
-        psToChange = new HashMap<>();
+        bddToChanges = new HashMap<>();
         for (Map.Entry<Behavior, HashMap<Behavior, PacketSet>> entryI : oldToNewBehavior.entrySet()){
-            Behavior oldEdge = entryI.getKey();
+            Behavior oldPort = entryI.getKey();
             for (Map.Entry<Behavior, PacketSet> entryJ : entryI.getValue().entrySet()) {
-                Behavior newEdge = entryJ.getKey();
+                Behavior newPort = entryJ.getKey();
                 PacketSet bdd = entryJ.getValue();
-                if (!psToChange.containsKey(bdd)) {
-                    psToChange.put(bdd, new ArrayList<>());
+                if (!bddToChanges.containsKey(bdd)) {
+                    bddToChanges.put(bdd, new ArrayList<>());
                 }
-                psToChange.get(bdd).add(new Change(bdd, oldEdge, newEdge));
+                bddToChanges.get(bdd).add(new Pair<>(oldPort, newPort));
             }
         }
     }
@@ -72,9 +62,9 @@ public class Changes {
 
 
     public void merge(Changes t) {
-        for (Behavior oldBehavior : t.oldToNewBehavior.keySet()) {
-            for (Map.Entry<Behavior, PacketSet> entry : t.oldToNewBehavior.get(oldBehavior).entrySet()) {
-                this.add(entry.getValue(), oldBehavior, entry.getKey());
+        for (Behavior oldPort : t.oldToNewBehavior.keySet()) {
+            for (Map.Entry<Behavior, PacketSet> entry : t.oldToNewBehavior.get(oldPort).entrySet()) {
+                this.add(entry.getValue(), oldPort, entry.getKey());
             }
         }
     }

@@ -45,30 +45,45 @@ public class PacketSet {
         return new PacketSet(ht, bdd.ref(bdd.not(this.predicate)));
     }
 
+    public BoundingVolume getBv() {
+        return bv;
+    }
+
     public boolean isEmpty(){
         return predicate==0;
     }
     public boolean hasOverlap(PacketSet ps){
-        //todo
-        return !this.and(ps).isEmpty();
-
+        if(this.predicate==0 || ps.predicate == 0) return false;
+        if(this.predicate==1 || ps.predicate == 1) return true;
+        if(this.predicate == ps.predicate) return true;
+        if(bv.isIntersection(ps.bv)){
+            return !this.and(ps).isEmpty();
+        }
+        return false;
     }
+
+    public int getPredicate() {
+        return predicate;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PacketSet packetSet = (PacketSet) o;
-        return predicate == packetSet.predicate && Objects.equals(ht, packetSet.ht);
+        return predicate == packetSet.predicate;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(predicate, ht);
+        return Objects.hash(predicate);
     }
 
     @Override
     public String toString() {
+        if(predicate == 0) return "0[null]";
+        if(predicate == 1) return "1[all]";
         if(bv == null) bv = ht.getBoundingVolume(predicate);
-        return ht.printBV(bv);
+        return predicate + ht.printBV(bv);
     }
 }

@@ -1,6 +1,7 @@
 package verifier.util;
 
 import verifier.Edge;
+import verifier.Node;
 import verifier.Rule;
 import verifier.transformation.Transformation;
 
@@ -19,6 +20,9 @@ public class Behavior {
         this(r.getEdge(), r.getModify());
     }
 
+    public Node getNode(){
+        return e.src();
+    }
     @Override
     public String toString() {
         return String.format("[%s,%s]", e, t);

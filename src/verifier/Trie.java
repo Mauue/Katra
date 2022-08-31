@@ -20,7 +20,7 @@ public class Trie {
 
         long dstIp = rule.ip;
         long bit = 1L << 31;
-        for (int i = 0; i < rule.getPriority(); i++) {
+        for (int i = 0; i < rule.prefix; i++) {
 
             boolean flag = (bit & dstIp) == 0;
             t = t.getNext(flag ? 0 : 1);

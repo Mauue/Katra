@@ -2,22 +2,26 @@ package verifier.transformation;
 
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
-import verifier.util.LocatedPacket;
 
 public class TPush extends Transformation{
-    public TPush(NetworkVerifier nv) {
+    static TPush object = null;
+
+    public static TPush getTPush(NetworkVerifier nv){
+        if(object == null) object = new TPush(nv);
+        return object;
+    }
+    TPush(NetworkVerifier nv) {
         super(nv);
     }
 
     @Override
     public HeaderStack transform(HeaderStack s) {
-        LocatedPacket lp = s.top();
-        return s.link(lp);
+        return s.push(s.top());
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj.getClass() == this.getClass();
+        return obj.toString() == this.toString();
     }
 
     @Override

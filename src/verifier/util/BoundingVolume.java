@@ -25,6 +25,6 @@ public class BoundingVolume {
     }
 
     private boolean singleDimensionIntersection(long min1, long max1, long min2, long max2){
-        return !((min1 >= max2) || (min2 >= max1));
+        return !((min1 > max2) || (min2 > max1));
     }
 }

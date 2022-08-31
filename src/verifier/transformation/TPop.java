@@ -3,20 +3,21 @@ package verifier.transformation;
 import verifier.NetworkVerifier;
 import verifier.HeaderStack;
 
-public class TPop extends Transformation{
+import java.util.Objects;
 
-    public TPop(NetworkVerifier nv) {
+public class TPop extends Transformation{
+    static TPop object = null;
+    TPop(NetworkVerifier nv) {
         super(nv);
     }
 
+    public static TPop getTPop(NetworkVerifier nv){
+        if(object == null) object = new TPop(nv);
+        return object;
+    }
     @Override
     public HeaderStack transform(HeaderStack s) {
         return s.bot();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj.getClass() == this.getClass();
     }
 
     @Override
