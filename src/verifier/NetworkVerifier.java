@@ -19,9 +19,7 @@ public class NetworkVerifier {
     Map<PacketSet, Behaviors> behaviorMap;
 
 
-    public NetworkVerifier(HeaderType ht){
-        headerType = ht;
-        headerType.setNv(this);
+    public NetworkVerifier(){
         checks = new ArrayList<>();
         nodes = new HashMap<>();
         rules = new LinkedList<>();
@@ -29,6 +27,9 @@ public class NetworkVerifier {
         behaviorMap = new HashMap<>();
         pecs = new HashSet<>();
         edges = new LinkedList<>();
+        headerType = HeaderType.headerType;
+        headerType.setNv(this);
+
     }
 
     public PacketSet createRange(Map<String, Range> r){
@@ -81,11 +82,11 @@ public class NetworkVerifier {
     }
 
     public PacketSet allHeaders(){
-        return new PacketSet(headerType, 1);
+        return HeaderType.allHeader();
     }
 
     public PacketSet zeroHeaders(){
-        return new PacketSet(headerType, 0);
+        return HeaderType.zeroHeader();
     }
 
     public void addCheck(Check check){
@@ -454,9 +455,9 @@ public class NetworkVerifier {
         return res;
     }
 
-    public void printBV(PacketSet ps){
-        headerType.printBV(ps.getBv());
-    }
+//    public void printBV(PacketSet ps){
+//        HeaderType.printBV(ps);
+//    }
     private boolean satisfyProperty(VNode n, Transformation t){
         for(Check check: checks){
             if(!check.isSatisfy(n.u, t)) return false;

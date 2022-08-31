@@ -18,8 +18,8 @@ public class Example2 {
         headerSettings.put("dstip", 32);
 //        headerSettings.put("ttl", 8);
 
-        HeaderType headerType = new HeaderType(headerSettings);
-        NetworkVerifier nv = new NetworkVerifier(headerType);
+        HeaderType.update(headerSettings);
+        NetworkVerifier nv = new NetworkVerifier();
 
         // build the network topology
         List<Node> nodes = nv.getOrAddNodes("v1", "v2", "v3");

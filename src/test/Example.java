@@ -18,8 +18,8 @@ public class Example {
         headerSettings.put("dstip", 32); headerSettings.put("srcip", 32);
 
         // instantiate a new network verifier
-        HeaderType headerType = new HeaderType(headerSettings);
-        NetworkVerifier nv = new NetworkVerifier(headerType);
+         HeaderType.update(headerSettings);
+        NetworkVerifier nv = new NetworkVerifier();
 
         // build the network topology
         List<Node> nodes = nv.getOrAddNodes("n1", "n2");

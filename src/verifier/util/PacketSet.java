@@ -4,50 +4,51 @@ import jdd.bdd.BDD;
 import verifier.HeaderType;
 import verifier.NetworkVerifier;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class PacketSet {
     int predicate;
-    HeaderType ht;
-    BDD bdd;
-    BoundingVolume bv;
+    static BDD bdd = HeaderType.headerType.bdd;
+    static Map<Integer, BoundingVolume> bvMap = new HashMap<>();
 
-    public PacketSet(HeaderType ht, int predicate){
+
+    public PacketSet(int predicate){
         this.predicate = predicate;
-        this.ht = ht;
-        bdd = ht.bdd;
-        bv = ht.getBoundingVolume(predicate);
     }
 
     public PacketSet(PacketSet ps){
         this.predicate = ps.predicate;
-        this.ht = ps.ht;
-        bdd = ht.bdd;
     }
 
-    public void updateBoundingVolume(){
-        bv = ht.getBoundingVolume(predicate);
-        System.out.println(ht.printBV(bv));
+    public static BoundingVolume updateBoundingVolume(int predicate){
+        if(!bvMap.containsKey(predicate)) {
+            BoundingVolume bv = HeaderType.getBoundingVolume(predicate);
+            bvMap.put(predicate, bv);
+        }
+        return bvMap.get(predicate);
+//        System.out.println(ht.printBV(bv));
     }
 
     public PacketSet and(PacketSet p2){
-        return new PacketSet(ht, bdd.ref(bdd.and(this.predicate, p2.predicate)));
+        return new PacketSet(bdd.ref(bdd.and(this.predicate, p2.predicate)));
     }
 
     public PacketSet or(PacketSet p2){
-        return new PacketSet(ht, bdd.ref(bdd.or(this.predicate, p2.predicate)));
+        return new PacketSet(bdd.ref(bdd.or(this.predicate, p2.predicate)));
     }
     public PacketSet xor(PacketSet p2){
-        return new PacketSet(ht, bdd.ref(bdd.xor(this.predicate, p2.predicate)));
+        return new PacketSet(bdd.ref(bdd.xor(this.predicate, p2.predicate)));
     }
 
     public PacketSet not(){
-        return new PacketSet(ht, bdd.ref(bdd.not(this.predicate)));
+        return new PacketSet(bdd.ref(bdd.not(this.predicate)));
     }
 
-    public BoundingVolume getBv() {
-        return bv;
-    }
+//    public BoundingVolume getBv() {
+//        return bv;
+//    }
 
     public boolean isEmpty(){
         return predicate==0;
@@ -56,7 +57,9 @@ public class PacketSet {
         if(this.predicate==0 || ps.predicate == 0) return false;
         if(this.predicate==1 || ps.predicate == 1) return true;
         if(this.predicate == ps.predicate) return true;
-        if(bv.isIntersection(ps.bv)){
+        BoundingVolume bv1 = updateBoundingVolume(ps.predicate);
+        BoundingVolume bv2 = updateBoundingVolume(this.predicate);
+        if(bv1.isIntersection(bv2)){
             return !this.and(ps).isEmpty();
         }
         return false;
@@ -83,7 +86,6 @@ public class PacketSet {
     public String toString() {
         if(predicate == 0) return "0[null]";
         if(predicate == 1) return "1[all]";
-        if(bv == null) bv = ht.getBoundingVolume(predicate);
-        return predicate + ht.printBV(bv);
+        return predicate + HeaderType.printBV(updateBoundingVolume(predicate));
     }
 }

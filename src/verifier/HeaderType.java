@@ -8,45 +8,65 @@ import java.util.*;
 public class HeaderType {
     public BDD bdd;
 
-    NetworkVerifier nv;
+    public NetworkVerifier nv = null;
     LinkedHashMap<String, Integer> elements;
     Map<String, Integer> elementVarIndex;
     Map<String, int[]> elementsVar;
     Map<String, Integer> elementIndex;
     Map<String, Integer> forallElement; // jdd-forall
 
+    static PacketSet all = null;
+    static PacketSet zero = null;
+    public final static HeaderType headerType = new HeaderType();
+
     int length;
     int size;
-    public HeaderType(Map<String, Integer> e){
+    HeaderType(){
         bdd = new BDD(10000, 10000);
-        elements = new LinkedHashMap<>(e);
         elementVarIndex = new HashMap<>();
         elementsVar = new HashMap<>();
         forallElement = new HashMap<>();
         elementIndex = new HashMap<>();
         length = 0;
-        size = e.size();
-        elements.forEach((s, l)-> {
-            elementVarIndex.put(s, length);
-            length += l;
-            int[] array = new int[length];
-            declareVars(array, length);
-            elementsVar.put(s, array);
-            elementIndex.put(s, elementIndex.size());
-        });
-        int last = 1;
-        for (Map.Entry<String, Integer> entry : elements.entrySet()) {
-            String s = entry.getKey();
-            forallElement.put(s, last);
-            int[] array = elementsVar.get(s);
-            for (Integer i : array) {
-                last = bdd.andTo(last, i);
-            }
-            bdd.ref(last);
-        }
+
     }
 
-    public PacketSet createSingle(Map<String, Integer> s){
+//    public HeaderType(Map<String, Integer> e){
+//        this();
+//        update(e);
+//    }
+    public static void update(Map<String, Integer> e){
+        headerType.elements = new LinkedHashMap<>(e);
+
+        headerType.size = e.size();
+        headerType.elements.forEach((s, l)-> {
+            headerType.elementVarIndex.put(s, headerType.length);
+            headerType.length += l;
+            int[] array = new int[headerType.length];
+            headerType.declareVars(array, headerType.length);
+            headerType.elementsVar.put(s, array);
+            headerType.elementIndex.put(s, headerType.elementIndex.size());
+        });
+        int last = 1;
+        for (Map.Entry<String, Integer> entry : headerType.elements.entrySet()) {
+            String s = entry.getKey();
+            headerType.forallElement.put(s, last);
+            int[] array = headerType.elementsVar.get(s);
+            for (Integer i : array) {
+                last = headerType.bdd.andTo(last, i);
+            }
+            headerType.bdd.ref(last);
+        }
+
+        all = new PacketSet(1);
+        zero = new PacketSet(0);
+    }
+
+    public static PacketSet createSingle(Map<String, Integer> s){
+        return headerType._createSingle(s);
+    }
+
+    PacketSet _createSingle(Map<String, Integer> s){
         int result = 1;
         for(Map.Entry<String, Integer> entry: s.entrySet()) {
             String name = entry.getKey();
@@ -57,9 +77,13 @@ public class HeaderType {
                 result = bdd.andTo(result, temp);
             }
         }
-        return new PacketSet(this, result);
+        return new PacketSet(result);
     }
-    public PacketSet createRange(Map<String, Range> ranges){
+
+    public static PacketSet createRange(Map<String, Range> s){
+        return headerType._createRange(s);
+    }
+    PacketSet _createRange(Map<String, Range> ranges){
         // TODO
         for(Map.Entry<String, Range> entry: ranges.entrySet()){
             if(elements.containsKey(entry.getKey())){
@@ -68,8 +92,10 @@ public class HeaderType {
         }
         return null;
     }
-
-    public PacketSet createPrefix(Map<String, IPPrefix> p){
+    public static PacketSet createPrefix(Map<String, IPPrefix> p){
+        return headerType._createPrefix(p);
+    }
+    PacketSet _createPrefix(Map<String, IPPrefix> p){
         int result = 1;
         for(Map.Entry<String, IPPrefix> entry: p.entrySet()){
             String name = entry.getKey();
@@ -80,7 +106,7 @@ public class HeaderType {
                 result = bdd.andTo(result, temp);
             }
         }
-        return new PacketSet(this, result);
+        return new PacketSet(result);
     }
 
     public void setNv(NetworkVerifier nv){
@@ -91,7 +117,19 @@ public class HeaderType {
         return nv;
     }
 
-    public BoundingVolume getBoundingVolume(int predicate){
+    public static PacketSet allHeader(){
+        return all;
+    }
+
+    public static PacketSet zeroHeader(){
+        return zero;
+    }
+
+    public static BoundingVolume getBoundingVolume(int predicate){
+        return headerType._getBoundingVolume(predicate);
+    }
+
+    public BoundingVolume _getBoundingVolume(int predicate){
         if(predicate == 0) return null;
         long[] min = new long[size];
         long[] max = new long[size];
@@ -103,10 +141,6 @@ public class HeaderType {
             predicate = bdd.exists(predicate, cube);
             int len = entry.getValue();
             int index = elementVarIndex.get(name);
-//            if(predicate >= 2){
-//                bdd.print(predicate);
-//                bdd.printSet(predicate);
-//            }
             min[i] = findMinRec(predicate, index, index, len, 0L);
             max[i] = findMaxRec(predicate, index, index, len, 0L);
             i++;
@@ -152,40 +186,41 @@ public class HeaderType {
         return findMinRec(high, level+1, start, len, now);
 
     }
-
-    public String printBV(BoundingVolume bv){
+    public static String printBV(PacketSet ps){
+        return printBV(getBoundingVolume(ps.getPredicate()));
+    }
+    public static String printBV(BoundingVolume bv){
         StringBuilder sb = new StringBuilder();
         int i=0;
-        for(String name: elements.keySet()){
+        for(String name: headerType.elements.keySet()){
             sb.append(String.format("%s: [%d - %d] ", name, bv.min[i], bv.max[i]));
             i++;
         }
         return sb.toString();
     }
 
-    public PacketSet ttlDecline(PacketSet ps, String key){
-        BoundingVolume bv = ps.getBv();
-        int index = elementIndex.get(key);
-        long min = bv.min[index];
-        if(min == 0) {
-            System.out.println("ttl decline on 0!");
-            return null;
-        }
-        long max = bv.max[index];
-
-        Map<String, Integer> minMap = new HashMap<>(); minMap.put(key, (int) (min-1));
-        Map<String, Integer> maxMap = new HashMap<>(); minMap.put(key, (int) max);
-        System.out.println(min);
-        System.out.println(max);
-        PacketSet minS = createSingle(minMap);
-        PacketSet maxS = createSingle(maxMap);
-        minS.updateBoundingVolume();
-        maxS.updateBoundingVolume();
-        ps = ps.and(maxS.not());
-        int tmp = bdd.ref(bdd.forall(ps.getPredicate(), forallElement.get(key)));
-        tmp = bdd.ref(bdd.andTo(tmp, minS.getPredicate()));
-        return new PacketSet(this, tmp);
-    }
+//    public PacketSet ttlDecline(PacketSet ps, String key){
+//        BoundingVolume bv = ps.getBv();
+//        int index = elementIndex.get(key);
+//        long min = bv.min[index];
+//        if(min == 0) {
+//            System.out.println("ttl decline on 0!");
+//            return null;
+//        }
+//        long max = bv.max[index];
+//
+//        Map<String, Integer> minMap = new HashMap<>(); minMap.put(key, (int) (min-1));
+//        Map<String, Integer> maxMap = new HashMap<>(); minMap.put(key, (int) max);
+//        System.out.println(min);
+//        System.out.println(max);
+//        PacketSet minS = createSingle(minMap);
+//        PacketSet maxS = createSingle(maxMap);
+//
+//        ps = ps.and(maxS.not());
+//        int tmp = bdd.ref(bdd.forall(ps.getPredicate(), forallElement.get(key)));
+//        tmp = bdd.ref(bdd.andTo(tmp, minS.getPredicate()));
+//        return new PacketSet(this, tmp);
+//    }
     private void declareVars(int[] vars, int bits) {
         for (int i = 0; i < bits; i++) {
             vars[i] = bdd.createVar();
