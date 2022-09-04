@@ -1,6 +1,7 @@
 package test;
 
 import verifier.*;
+import verifier.check.Check;
 import verifier.check.LoopCheck;
 import verifier.check.ReachabilityCheck;
 import verifier.transformation.Transformation;
@@ -43,7 +44,7 @@ public class Example2 {
         edges = nv.getOrAddBiEdge(v3, v3);
         Edge e33 = edges.getFirst();
 
-        nv.addCheck(new LoopCheck(nv.allHeaders()));
+//        nv.addCheck(new LoopCheck(nv.allHeaders()));
 
 
         PacketSet dstM = nv.createPrefix("dstip", 0x0000000fL, 30);
@@ -81,11 +82,12 @@ public class Example2 {
 //
         nv.calInitPEC();
 
-        nv.addCheck(new ReachabilityCheck(all, v3, nv));
+        List<Check> checks = new LinkedList<>();
+        checks.add(new ReachabilityCheck(all, v3, nv));
 
         for(PacketSet p: nv.getPecs()) {
             System.out.println("check pec:" +p);
-            Trace trace = nv.checkProperty(p, Collections.singletonList(v1));
+            Trace trace = nv.checkProperty(p, Collections.singletonList(v1), checks);
             if (trace != null) trace.print();
         }
 

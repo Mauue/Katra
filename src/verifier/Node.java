@@ -1,8 +1,6 @@
 package verifier;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Node {
     public static int cnt = 0;
@@ -10,6 +8,8 @@ public class Node {
     NetworkVerifier nv;
     List<Edge> in;
     List<Edge> out;
+
+    Map<String, Edge> edgeMap;
 
     private Trie rules;
     Edge selfEdge;
@@ -24,6 +24,8 @@ public class Node {
 
         uid = cnt;
         cnt++;
+        edgeMap = new HashMap<>();
+        selfEdge = new Edge(this, this);
     }
 
     public String getName() {
@@ -41,15 +43,30 @@ public class Node {
 
     public void addEdgeOut(Edge edge){
         out.add(edge);
-        if(edge.end.equals(this)) selfEdge = edge;
+//        if(edge.end.equals(this)) selfEdge = edge;
+        edgeMap.put(edge.tgt().name, edge);
     }
+
+    public void addEdgeOut(String port, Edge edge){
+        out.add(edge);
+//        if(edge.end.equals(this)) selfEdge = edge;
+        edgeMap.put(port, edge);
+    }
+
+    public Edge getEdge(String port){
+        if(edgeMap.containsKey(port)) return edgeMap.get(port);
+        Edge e = new Edge(this, null);
+        addEdgeOut(port, new Edge(this, port, null, port));
+        return e;
+    }
+
 
     public ArrayList<Rule> addAndGetAllUntil(Rule rule) {
         ArrayList<Rule> res = this.rules.addAndGetAllOverlappingWith(rule);
-        System.out.println("========================================");
-        System.out.println("insert:" + rule);
-        System.out.println("overlap:" + res);
-        System.out.println("========================================");
+//        System.out.println("========================================");
+//        System.out.println("insert:" + rule);
+//        System.out.println("overlap:" + res);
+//        System.out.println("========================================");
         return res;
     }
 

@@ -7,10 +7,26 @@ public class Edge {
     Node end;
     NetworkVerifier nv;
 
+    String name;
+
     public Edge(Node begin, Node end){
         this.begin = begin;
         this.end = end;
         this.nv = begin.getNv();
+        if(end == null)
+            this.name = begin.getName() + "->null";
+        else
+            this.name = begin.getName() + "->" + end.name;
+    }
+
+    public Edge(Node begin, String port1, Node end, String port2){
+        this.begin = begin;
+        this.end = end;
+        this.nv = begin.getNv();
+        if(end == null)
+            this.name = begin.getName() + "," + port1 + "->null";
+        else
+            this.name = begin.getName() + "," + port1 + "->" + end.name + "," + port2;
     }
 
     public Node src(){
@@ -23,7 +39,7 @@ public class Edge {
 
     @Override
     public String toString() {
-        return "<" + begin + ", " + end + '>';
+        return "<" + name + '>';
     }
 
     @Override
@@ -31,11 +47,11 @@ public class Edge {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Edge edge = (Edge) o;
-        return Objects.equals(begin, edge.begin) && Objects.equals(end, edge.end) && Objects.equals(nv, edge.nv);
+        return edge.name.equals(this.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(begin, end, nv);
+        return Objects.hash(name);
     }
 }

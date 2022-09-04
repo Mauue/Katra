@@ -30,7 +30,7 @@ public class Example {
         Edge e21 = edges.getSecond();
 
         // register the properties we want to monitor
-        nv.addCheck(new LoopCheck(nv.allHeaders()));
+//        nv.addCheck(new LoopCheck(nv.allHeaders()));
 
         // create new prioritized forwarding rules
         // TODO: range is not implementation, so use prefix

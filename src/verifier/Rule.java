@@ -11,7 +11,7 @@ public class Rule {
     PacketSet hit;
     Transformation modify;
 
-    NetworkVerifier nv;
+//    NetworkVerifier nv;
 
     Behavior behavior;
     boolean isPrefix = false;
@@ -29,7 +29,7 @@ public class Rule {
         this.match = match;
         this.hit = new PacketSet(match);
         this.modify = t;
-        this.nv = e.nv;
+//        this.nv = e.nv;
 
         this.behavior = new Behavior(e, t);
     }

@@ -9,9 +9,8 @@ import java.util.*;
 
 public class NetworkVerifier {
     HeaderType headerType;
-    Map<String, Node> nodes;
+    public Map<String, Node> nodes;
     List<Edge> edges;
-    List<Check> checks;
     List<Rule> rules;
 
     Collection<PacketSet> pecs;
@@ -20,7 +19,6 @@ public class NetworkVerifier {
 
 
     public NetworkVerifier(){
-        checks = new ArrayList<>();
         nodes = new HashMap<>();
         rules = new LinkedList<>();
         predMap = new HashMap<>();
@@ -81,6 +79,17 @@ public class NetworkVerifier {
         return new Pair<>(edge12, edge21);
     }
 
+    public Pair<Edge, Edge> getOrAddBiEdge(Node n1, String port1, Node n2, String port2){
+        Edge edge12 = new Edge(n1, port1, n2, port2);
+        n1.addEdgeOut(port1, edge12); n2.addEdgeIn(edge12);
+        if(n1.equals(n2)) return new Pair<>(edge12, edge12);
+        Edge edge21 = new Edge(n2, n1);
+        n2.addEdgeOut(port2, edge21); n1.addEdgeIn(edge21);
+        edges.add(edge12);
+        edges.add(edge21);
+        return new Pair<>(edge12, edge21);
+    }
+
     public PacketSet allHeaders(){
         return HeaderType.allHeader();
     }
@@ -89,9 +98,6 @@ public class NetworkVerifier {
         return HeaderType.zeroHeader();
     }
 
-    public void addCheck(Check check){
-        this.checks.add(check);
-    }
 
     public Transformation getTID() {return TId.getTId(this);}
     public Transformation getTPop(){
@@ -136,8 +142,15 @@ public class NetworkVerifier {
     public void addRules(Rule... rule){
 //        Violation v = new Violation(rule);
         rules.addAll(Arrays.asList(rule));
-        for(Rule r: rules)
-            System.out.println(r);
+//        for(Rule r: rules)
+//            System.out.println(r);
+    }
+
+    public void addRules(List<Rule> rule){
+//        Violation v = new Violation(rule);
+        rules.addAll(rule);
+//        for(Rule r: rules)
+//            System.out.println(r);
     }
 
     public void calInitPEC(){
@@ -251,88 +264,21 @@ public class NetworkVerifier {
             }
 
             for (Behaviors t : deletion) {
-                if (predMap.get(t).isEmpty()) predMap.remove(t);
+                if (predMap.containsKey(t) && predMap.get(t).isEmpty()) predMap.remove(t);
             }
         }
         predMap.forEach((k, v)-> {behaviorMap.put(v, k); pecs.add(v);});
         System.out.println(predMap.size());
         System.out.println(predMap);
     }
-//    public void update(List<Change> changes){
-//        for (Change change:changes){
-//            System.out.println(change);
-//            PacketSet p = predMap.get(change.oldBehavior);
-//            PacketSet interaction = p.and(change.packetSet);
-//            if(!interaction.isEmpty()){
-//                if(!interaction.equals(p)){
-//                    split(p, interaction, p.and(change.packetSet.not()));
-//                }
-//                transfer(interaction, change.oldBehavior, change.newBehavior);
-//
-//                PacketSet pp = predMap.get(change.newBehavior);
-//                if(!pp.equals(p) && behaviorMap.get(pp).equals(behaviorMap.get(p))){
-//                    merge(p, pp, p.or(pp));
-//                    break;
-//                }
-//
-//                change.packetSet = change.packetSet.and(p.not());
-//            }
-//        }
-//
-//        System.out.println(pecs.size());
-//        System.out.println(pecs);
-//    }
-//    private void split(PacketSet p, PacketSet p1, PacketSet p2){
-////        for(Behavior behavior: behaviorMap.get(p)){
-////            Collection<PacketSet> pa = predMap.get(behavior);
-////            pa.add(p1);
-////            pa.add(p2);
-////            pa.remove(p);
-////        }
-//        behaviorMap.put(p1, behaviorMap.get(p));
-//        behaviorMap.put(p2, behaviorMap.get(p));
-//        if(pecs.contains(p)){
-//            pecs.remove(p);
-//            pecs.add(p1);
-//            pecs.add(p2);
-//        }
-//    }
 
-//    private void transfer(PacketSet p, Behavior from, Behavior to){
-//        PacketSet fromPred = predMap.get(from);
-//        predMap.put(from, fromPred.and(p.not()));
-//
-//        PacketSet toPred = predMap.get(to);
-//        predMap.put(to, toPred.or(p));
-//
-//        Collection<Behavior> es = behaviorMap.get(p);
-//        es.add(to);
-//        es.remove(from);
-//        pecs.add(p);
-//    }
-//
-//    private void merge(PacketSet p1, PacketSet p2, PacketSet p){
-////        for(Behavior edge: behaviorMap.get(p1)){
-////            Collection<PacketSet> pa = predMap.get(edge);
-////            pa.add(p);
-////            pa.remove(p1);
-////            pa.remove(p2);
-////        }
-//
-//        behaviorMap.put(p, behaviorMap.get(p1));
-//        if(pecs.contains(p1)||pecs.contains(p2)) {
-//            pecs.add(p);
-//            pecs.remove(p1);
-//            pecs.remove(p2);
-//        }
-//    }
-    public Trace checkProperty(PacketSet pec, Collection<Node> source){
+    public Trace checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){
         List<VNode> visited = new LinkedList<>();
         for(Node s: source){
             VNode u = new VNode(s, pec, new HeaderStack(this, pec));
             if(!visited.contains(u)){
                 u.previous = null;
-                Trace trace = dfs(visited, u, 0);
+                Trace trace = dfs(visited, u, 0, checks);
                 if(trace != null)
                     return trace;
             }
@@ -340,14 +286,14 @@ public class NetworkVerifier {
         return null;
     }
 
-    private Trace dfs(List<VNode> visited, VNode u, int i){
+    private Trace dfs(List<VNode> visited, VNode u, int i, List<Check> checks){
         Behavior b = forward(u.getLoc(), u.getEc());
         Edge e = b.e;
         Transformation t = b.t;
         HeaderStack s = t.transform(u.getStack());
 
-        if (s == null) {
-            if(satisfyProperty(u, t)){
+        if (s == null || e.tgt() == null) {
+            if(satisfyProperty(u, t, checks)){
                 return u.getTrace();
             }else{
                 return null;
@@ -369,12 +315,12 @@ public class NetworkVerifier {
 
         for(Hop hop: nextHops){
             VNode v = hop.u;
-            v.previous = new Hop(t, u);
+            v.setPrevious(new Hop(t, u));
             if(hasLoop(v, visited))
                 return v.getTrace();
 
             if(!visited.contains(v)){
-                Trace trace = dfs(visited, v, i+1);
+                Trace trace = dfs(visited, v, i+1, checks);
                 if (trace != null){
                     return trace;
                 }
@@ -412,7 +358,7 @@ public class NetworkVerifier {
     private boolean hasLoop(VNode u, Collection<VNode> visited){
         Collection<VNode> collection = new HashSet<>();
         visited.forEach(vNode -> {if(vNode.getLoc() == u.getLoc()) collection.add(vNode);});
-        VNode c = u.previous.u;
+        VNode c = u.getPrevious().u;
         int l = u.headerStack.getLen();
         while( c != null && !collection.isEmpty()){
             l = Math.min(l, c.headerStack.getLen());
@@ -423,7 +369,7 @@ public class NetworkVerifier {
                     return true;
                 }
             }
-            c = c.previous.u;
+            c = c.getPrevious().u;
         }
         return false;
     }
@@ -458,7 +404,7 @@ public class NetworkVerifier {
 //    public void printBV(PacketSet ps){
 //        HeaderType.printBV(ps);
 //    }
-    private boolean satisfyProperty(VNode n, Transformation t){
+    private boolean satisfyProperty(VNode n, Transformation t, List<Check> checks){
         for(Check check: checks){
             if(!check.isSatisfy(n.u, t)) return false;
         }
@@ -470,11 +416,22 @@ public class NetworkVerifier {
         PacketSet pec;
         HeaderStack headerStack;
 
-        Hop previous;
+        Node source;
+        private Hop previous;
         VNode(Node u, PacketSet pec, HeaderStack headerStack){
             this.u = u;
             this.pec = pec;
             this.headerStack = headerStack;
+            this.source = u;
+        }
+
+        public void setPrevious(Hop previous) {
+            this.previous = previous;
+            this.source = previous.u.source;
+        }
+
+        public Hop getPrevious() {
+            return previous;
         }
 
         Node getLoc(){
@@ -494,8 +451,8 @@ public class NetworkVerifier {
             Trace t = new Trace();
             while (n != null){
                 t.add(n.u, n.getEc());
-                if(n.previous != null)
-                    n = n.previous.u;
+                if(n.getPrevious() != null)
+                    n = n.getPrevious().u;
                 else
                     n = null;
             }
