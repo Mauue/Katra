@@ -65,9 +65,13 @@ public class Loader {
                     long ip = Long.parseLong(token[1]);
                     int prefix = Integer.parseInt(token[2]);
                     Edge edge = node.getEdge(forward);
-                    if(edge == null) System.err.println(node+" " + forward);
+                    Rule r;
                     PacketSet p = nv.createPrefix("dstip", ip, prefix);
-                    Rule r = new Rule(32-prefix, edge, p, nv.getTID());
+                    if(edge == null) {
+                        r = new Rule(32-prefix, node.getSelfEdge(), p, nv.getTDelv());
+                    }else {
+                        r = new Rule(32 - prefix, edge, p, nv.getTID());
+                    }
                     r.setPrefixRule(ip, prefix);
                     rules.add(r);
                 }

@@ -233,9 +233,9 @@ public class NetworkVerifier {
     public void update2(Changes changes){
         changes.aggrBDDs();
 
-        HashMap<Behaviors, PacketSet> oldPred = (HashMap<Behaviors, PacketSet>)((HashMap<Behaviors, PacketSet>) predMap).clone();
         Set<Behaviors> deletion = new HashSet<>();
         for (Map.Entry<PacketSet, ArrayList<Pair<Behavior, Behavior>>> entryI : changes.getAll().entrySet()) {
+            HashMap<Behaviors, PacketSet> oldPred = (HashMap<Behaviors, PacketSet>)((HashMap<Behaviors, PacketSet>) predMap).clone();
 //            System.out.println(change);
             Behavior filterBehavior = entryI.getValue().get(0).getFirst();
             for(Map.Entry<Behaviors, PacketSet> entry: oldPred.entrySet()){

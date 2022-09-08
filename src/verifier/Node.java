@@ -55,9 +55,9 @@ public class Node {
 
     public Edge getEdge(String port){
         if(edgeMap.containsKey(port)) return edgeMap.get(port);
-        Edge e = new Edge(this, null);
-        addEdgeOut(port, new Edge(this, port, null, port));
-        return e;
+//        Edge e = getSelfEdge();
+//        addEdgeOut(port, new Edge(this, port, null, port));
+        return null;
     }
 
 

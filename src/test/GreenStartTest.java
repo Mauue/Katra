@@ -16,8 +16,8 @@ public class GreenStartTest {
         Loader loader = new Loader();
         NetworkVerifier nv = loader.nv;
 
-        loader.setTopologyByFile("st/st.topology");
-        loader.readFibDict("st/ruleExp/");
+        loader.setTopologyByFile("i2/i2.topology");
+        loader.readFibDict("i2/rule/");
 
         nv.calInitPEC();
         System.out.println(nv.getPecs().size());
