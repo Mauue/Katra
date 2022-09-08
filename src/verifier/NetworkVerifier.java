@@ -34,7 +34,7 @@ public class NetworkVerifier {
         return headerType.createRange(r);
     }
     public PacketSet createPrefix(Map<String, IPPrefix> p){
-        return headerType.createPrefix(p);
+        return HeaderType.createPrefix(p);
     }
 
     public PacketSet createPrefix(String name, Long ip, int prefix){
@@ -44,6 +44,11 @@ public class NetworkVerifier {
         return createPrefix(map);
     }
 
+    public PacketSet createPrefix(String name, IPPrefix ip){
+        Map<String, IPPrefix> map = new HashMap<>();
+        map.put(name, ip);
+        return createPrefix(map);
+    }
     public PacketSet createSingle(Map<String, Integer> r){
         return headerType.createSingle(r);
     }
@@ -152,75 +157,51 @@ public class NetworkVerifier {
 //        for(Rule r: rules)
 //            System.out.println(r);
     }
+    static Comparator<Rule> comp = (Rule lhs, Rule rhs) -> {
+        // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
+        if (lhs.getPriority() > rhs.getPriority()) return -1;
+        if (lhs.getPriority() < rhs.getPriority()) return 1;
 
+        if (lhs.getDstIp() > rhs.getDstIp()) return -1;
+        if (lhs.getDstIp() < rhs.getDstIp()) return 1;
+
+        if (lhs.getEdge().hashCode() > rhs.getEdge().hashCode()) return -1;
+        if (lhs.getEdge().hashCode() < rhs.getEdge().hashCode()) return 1;
+
+        if (lhs.getNode().hashCode() ==  lhs.getNode().hashCode()) return 0;
+        if (lhs.getNode().hashCode() <  lhs.getNode().hashCode()) {
+            return -1;
+        } else {
+            return 1;
+        }
+    };
     public void calInitPEC(){
-        Comparator<Rule> comp = (Rule lhs, Rule rhs) -> {
-            // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
-            if (lhs.getPriority() > rhs.getPriority()) return -1;
-            if (lhs.getPriority() < rhs.getPriority()) return 1;
 
-//            if (lhs.getDstIp() > rhs.getDstIp()) return -1;
-//            if (lhs.getDstIp() < rhs.getDstIp()) return 1;
-
-            if (lhs.getEdge().hashCode() > rhs.getEdge().hashCode()) return -1;
-            if (lhs.getEdge().hashCode() < rhs.getEdge().hashCode()) return 1;
-
-            if (lhs.getNode().hashCode() ==  lhs.getNode().hashCode()) return 0;
-            if (lhs.getNode().hashCode() <  lhs.getNode().hashCode()) {
-                return -1;
-            } else {
-                return 1;
-            }
-        };
-
+        long s1 = System.nanoTime();
         initializeModelAndRules();
         Collections.sort(rules, comp);
+        long s2 = System.nanoTime();
 
-//        List<Behavior> b = new LinkedList<>();
-//        rules.forEach(r->{b.add(new Behavior(r.getEdge(), r.modify));});
-
-//        List<Change> changes = new LinkedList<>();
-//        for(Node node: nodes.values()){
-////            identifyChangesInsert(new Rule(Integer.MAX_VALUE, node.selfEdge, allHeaders(), getTDrop()), changes);
-//            Behavior b = new Behavior(node.selfEdge, getTID());
-//            predMap.put(b, allHeaders());
-//            behaviorMap.get(allHeaders()).add(b);
-//        }
         Changes changes = new Changes();
         for (Rule rule : rules) {
             identifyChangesInsert(rule, changes);
         }
+        long s3 = System.nanoTime();
+
+
         update2(changes);
+        System.out.println("initialize time: " + (s2-s1)/1000000.0 + " ms");
+        System.out.println("model time: " + (s3-s2)/1000000.0 + " ms");
     }
 
     public void initializeModelAndRules() {
-//        Collection<Behavior> zero = new HashSet<>();
-//        for(Behavior behavior: bs){
-//            if(behavior.t.getClass() == TDrop.class) continue;
-//            predMap.put(behavior, zeroHeaders());
-//            zero.add(behavior);
-//        }
-//        behaviorMap.put(zeroHeaders(), zero);
-//
-//
-//        List<Behavior> behaviors = new LinkedList<>();
-//        for(Node n: nodes.values()){
-//            behaviors.add(new Behavior(n.getSelfEdge(), getTDrop()));
-//        }
-//
-//        Collection<Behavior> all = new HashSet<>();
-//        for(Behavior b: behaviors){
-//            predMap.put(b, allHeaders());
-//            all.add(b);
-//        }
-//        behaviorMap.put(allHeaders(), new HashSet<>(all));
-//        pecs.add(allHeaders());
         ArrayList<Behavior> ports = new ArrayList<>();
         for (int i = 0; i < Node.cnt; i ++) ports.add(null);
         // Initialize each device with default rule sending packets to default device (i.e., black-hole)
         for (Node node : nodes.values()) {
             Behavior defaultBehavior = new Behavior(node.selfEdge, getTDrop());
             Rule r = new Rule(Integer.MAX_VALUE, node.selfEdge, allHeaders(), getTDrop());
+            r.setPrefixRule(0, 0);
             this.addRule(r);
             // initializing default rules w/o generating changes
             ports.set(node.uid, defaultBehavior);
@@ -268,8 +249,8 @@ public class NetworkVerifier {
             }
         }
         predMap.forEach((k, v)-> {behaviorMap.put(v, k); pecs.add(v);});
-        System.out.println(predMap.size());
-        System.out.println(predMap);
+//        System.out.println(predMap.size());
+//        System.out.println(predMap);
     }
 
     public Trace checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){

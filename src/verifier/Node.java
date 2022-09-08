@@ -1,5 +1,8 @@
 package verifier;
 
+import verifier.util.IPPrefix;
+import verifier.util.PacketSet;
+
 import java.util.*;
 
 public class Node {
@@ -14,6 +17,8 @@ public class Node {
     private Trie rules;
     Edge selfEdge;
 
+    PacketSet space;
+    Collection<PacketSet> spacePEC;
     public int uid;
     public Node(String name, NetworkVerifier nv){
         this.name = name;
@@ -26,6 +31,8 @@ public class Node {
         cnt++;
         edgeMap = new HashMap<>();
         selfEdge = new Edge(this, this);
+        space = nv.zeroHeaders();
+        spacePEC = new LinkedList<>();
     }
 
     public String getName() {
@@ -34,6 +41,10 @@ public class Node {
 
     public NetworkVerifier getNv() {
         return nv;
+    }
+
+    public Collection<PacketSet> getSpacePEC() {
+        return spacePEC;
     }
 
     public void addEdgeIn(Edge edge){
@@ -60,7 +71,25 @@ public class Node {
         return null;
     }
 
+    public void clearSpace(){
+        this.space = nv.zeroHeaders();
+    }
+    public void addSpace(IPPrefix ip){
+        this.space = this.space.or(nv.createPrefix("dstip", ip));
+    }
 
+    public PacketSet getSpace() {
+        return space;
+    }
+
+    public void updateSpacePEC(){
+        for(PacketSet pec: nv.pecs){
+            if(pec.hasOverlap(space)){
+                this.spacePEC.add(pec);
+            }
+        }
+//        System.out.println(name + getSpacePEC());
+    }
     public ArrayList<Rule> addAndGetAllUntil(Rule rule) {
         ArrayList<Rule> res = this.rules.addAndGetAllOverlappingWith(rule);
 //        System.out.println("========================================");

@@ -68,6 +68,12 @@ public class Rule {
         return priority;
     }
 
+    public long getDstIp(){
+        if(isPrefix){
+            return ip;
+        }
+        return 0;
+    }
     public boolean isPriorityThan(Rule r){
         return priority < r.priority;
     }

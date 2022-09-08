@@ -11,7 +11,7 @@ import java.util.Objects;
 public class PacketSet {
     int predicate;
     static BDD bdd = HeaderType.headerType.bdd;
-    static Map<Integer, BoundingVolume> bvMap = new HashMap<>();
+    static Map<Integer, BoundingVolume> bvMap = new HashMap<>(10000);
 
 
     public PacketSet(int predicate){

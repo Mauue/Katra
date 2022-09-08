@@ -4,6 +4,7 @@ import verifier.Edge;
 import verifier.NetworkVerifier;
 import verifier.Node;
 import verifier.Rule;
+import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
 
 import java.io.*;
@@ -44,7 +45,25 @@ public class Loader {
             readFibFile(node, dirname+name);
         }
     }
+    public void readSpaceFile(String filename) {
+        nv.nodes.values().forEach(Node::clearSpace);
+        try {
+            File file = new File(filename);
+            InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] token = line.split("\\s+");
+                Node node = nv.nodes.get(token[0]);
 
+                node.addSpace(new IPPrefix(Long.parseLong(token[1]), Integer.parseInt(token[2])));
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        nv.nodes.values().forEach(n->System.out.println(n.getSpace()));
+    }
     public void readFibFile(Node node, String filename) {
         List<Rule> rules = new LinkedList<>();
         List<Vector<Long>> pairs = new LinkedList<>();

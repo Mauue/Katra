@@ -15,4 +15,9 @@ public class IPPrefix {
     public long getIP() {
         return IP;
     }
+
+    @Override
+    public String toString() {
+        return String.format("%s %s", IP, prefix);
+    }
 }
