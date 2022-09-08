@@ -2,6 +2,7 @@ package verifier;
 
 import verifier.transformation.Transformation;
 import verifier.util.Behavior;
+import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
 
 public class Rule {
@@ -22,6 +23,12 @@ public class Rule {
         this.isPrefix = true;
         this.ip = ip;
         this.prefix = prefix;
+    }
+
+    public void setPrefixRule(IPPrefix ipPrefix){
+        this.isPrefix = true;
+        this.ip = ipPrefix.getIP();
+        this.prefix = ipPrefix.getPrefix();
     }
     public Rule(int p, Edge e, PacketSet match, Transformation t){
         this.priority = p;

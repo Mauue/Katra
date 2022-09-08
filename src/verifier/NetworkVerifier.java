@@ -12,6 +12,7 @@ public class NetworkVerifier {
     public Map<String, Node> nodes;
     List<Edge> edges;
     List<Rule> rules;
+    List<URule> uRules;
 
     Collection<PacketSet> pecs;
     Map<Behaviors, PacketSet> predMap;
@@ -27,7 +28,7 @@ public class NetworkVerifier {
         edges = new LinkedList<>();
         headerType = HeaderType.headerType;
         headerType.setNv(this);
-
+        uRules = new LinkedList<>();
     }
 
     public PacketSet createRange(Map<String, Range> r){
@@ -139,9 +140,9 @@ public class NetworkVerifier {
     }
 
     public Violation addRule(Rule rule){
-        Violation v = new Violation(rule);
+//        Violation v = new Violation(rule);
         rules.add(rule);
-        return v;
+        return null;
     }
 
     public void addRules(Rule... rule){
@@ -150,7 +151,9 @@ public class NetworkVerifier {
 //        for(Rule r: rules)
 //            System.out.println(r);
     }
-
+    public void addURules(List<URule> rs){
+        uRules.addAll(rs);
+    }
     public void addRules(List<Rule> rule){
 //        Violation v = new Violation(rule);
         rules.addAll(rule);
@@ -175,8 +178,18 @@ public class NetworkVerifier {
             return 1;
         }
     };
+    private void updateRule(){
+        if(!uRules.isEmpty()){
+            for(URule uRule: uRules){
+                Rule r = new Rule(uRule.priority, uRule.edge, createPrefix("dstip", uRule.ipPrefix), uRule.edge.isSelf?getTDelv():getTID());
+                r.setPrefixRule(uRule.ipPrefix);
+                rules.add(r);
+            }
+        }
+    }
     public void calInitPEC(){
-
+        long s0 = System.nanoTime();
+        updateRule();
         long s1 = System.nanoTime();
         initializeModelAndRules();
         Collections.sort(rules, comp);
@@ -187,11 +200,7 @@ public class NetworkVerifier {
             identifyChangesInsert(rule, changes);
         }
         long s3 = System.nanoTime();
-
-
         update2(changes);
-        System.out.println("initialize time: " + (s2-s1)/1000000.0 + " ms");
-        System.out.println("model time: " + (s3-s2)/1000000.0 + " ms");
     }
 
     public void initializeModelAndRules() {

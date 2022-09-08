@@ -9,6 +9,7 @@ public class Edge {
 
     String name;
 
+    boolean isSelf;
     public Edge(Node begin, Node end){
         this.begin = begin;
         this.end = end;
@@ -17,6 +18,7 @@ public class Edge {
             this.name = begin.getName() + "->null";
         else
             this.name = begin.getName() + "->" + end.name;
+        this.isSelf = begin == end;
     }
 
     public Edge(Node begin, String port1, Node end, String port2){
@@ -27,6 +29,7 @@ public class Edge {
             this.name = begin.getName() + "," + port1 + "->null";
         else
             this.name = begin.getName() + "," + port1 + "->" + end.name + "," + port2;
+        this.isSelf = begin == end;
     }
 
     public Node src(){

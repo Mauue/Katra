@@ -6,6 +6,7 @@ import verifier.Node;
 import verifier.Rule;
 import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
+import verifier.util.URule;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -65,7 +66,7 @@ public class Loader {
 //        nv.nodes.values().forEach(n->System.out.println(n.getSpace()));
     }
     public void readFibFile(Node node, String filename) {
-        List<Rule> rules = new LinkedList<>();
+        List<URule> rules = new LinkedList<>();
         List<Vector<Long>> pairs = new LinkedList<>();
         try {
             File file = new File(filename);
@@ -84,14 +85,13 @@ public class Loader {
                     long ip = Long.parseLong(token[1]);
                     int prefix = Integer.parseInt(token[2]);
                     Edge edge = node.getEdge(forward);
-                    Rule r;
-                    PacketSet p = nv.createPrefix("dstip", ip, prefix);
+                    URule r;
+//                    PacketSet p = nv.createPrefix("dstip", ip, prefix);
                     if(edge == null) {
-                        r = new Rule(32-prefix, node.getSelfEdge(), p, nv.getTDelv());
+                        r = new URule(32-prefix, node.getSelfEdge(), ip, prefix);
                     }else {
-                        r = new Rule(32 - prefix, edge, p, nv.getTID());
+                        r = new URule(32 - prefix, edge, ip, prefix);
                     }
-                    r.setPrefixRule(ip, prefix);
                     rules.add(r);
                 }
                 if (token[0].equals("nat")) {
@@ -107,7 +107,7 @@ public class Loader {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        nv.addRules(rules);
+        nv.addURules(rules);
     }
 
     private void addTopology(String d1, String p1, String d2, String p2) {

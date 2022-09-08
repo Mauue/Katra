@@ -17,7 +17,7 @@ public class HeaderType {
 
     static PacketSet all = null;
     static PacketSet zero = null;
-    public final static HeaderType headerType = new HeaderType();
+    public static HeaderType headerType = null;
 
     int length;
     int size;
@@ -29,6 +29,10 @@ public class HeaderType {
         elementIndex = new HashMap<>();
         length = 0;
 
+    }
+
+    public static void init(){
+        headerType = new HeaderType();
     }
 
 //    public HeaderType(Map<String, Integer> e){

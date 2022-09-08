@@ -1,5 +1,7 @@
 package verifier.util;
 
+import java.util.List;
+
 public class Utility {
     public static void main(String[] args) {
     }
@@ -81,5 +83,14 @@ public class Utility {
             rs = rs | intSlice;
         }
         return rs;
+    }
+
+    public static double avg(List<Long> list){
+        double res = 0;
+        double count = list.size();
+        for (Long aLong : list) {
+            res += (double)aLong / count;
+        }
+        return res;
     }
 }

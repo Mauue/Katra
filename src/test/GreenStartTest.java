@@ -7,28 +7,38 @@ import verifier.Trace;
 import verifier.check.Check;
 import verifier.check.ReachabilityCheck;
 import verifier.util.PacketSet;
+import verifier.util.Utility;
 
 import java.util.*;
 
 public class GreenStartTest {
+    static List<Long> timeList = new LinkedList<>();
     public static void main(String[] args) {
+        String network = args[0];
+        int times = Integer.parseInt(args[1]);
+        for(int i=0;i<times;i++) {
+            init();
+            Loader loader = new Loader();
+            loader.setTopologyByFile(network+"/" +network + ".topology");
+            loader.readSpaceFile(network+"/" +network +".space");
+            loader.readFibDict(network+ "/rule/");
+            verification(loader.nv);
+        }
+        System.out.println("avg time:" + Utility.avg(timeList)/1000000.0 + "ms");
+    }
+    static void init(){
+        HeaderType.init();
         Map<String, Integer> headerSettings = new HashMap<>();
         headerSettings.put("dstip", 32);
 //        headerSettings.put("ttl", 8);
-
         HeaderType.update(headerSettings);
-        Loader loader = new Loader();
-        NetworkVerifier nv = loader.nv;
-        long s0 = System.nanoTime();
-        loader.setTopologyByFile("i2/i2.topology");
-        loader.readSpaceFile("i2/i2.space");
-        loader.readFibDict("i2/rule/");
+    }
+    static void verification(NetworkVerifier nv){
         long s1 = System.nanoTime();
         nv.calInitPEC();
-        long s2 = System.nanoTime();
+        System.out.println(nv.getPecs());
         nv.nodes.values().forEach(Node::updateSpacePEC);
         List<Check> checks = new LinkedList<>();
-        long s3 = System.nanoTime();
         for(Node src: nv.nodes.values()) {
             for(Node dst: nv.nodes.values()) {
                 if(src.equals(dst)) continue;
@@ -44,11 +54,9 @@ public class GreenStartTest {
                 }
             }
         }
-        long s4 = System.nanoTime();
-        System.out.println("read file time: " + (s1-s0)/1000000.0 + " ms");
-        System.out.println("cal EC time: " + (s2-s1)/1000000.0 + " ms");
-        System.out.println("verification time: " + (s4-s3)/1000000.0 + " ms");
-        System.out.println(nv.getPecs().size());
-        System.out.println(nv.getPecs());
+        long s2 = System.nanoTime();
+        System.out.println(s2-s1);
+        timeList.add(s2-s1);
     }
 }
+
