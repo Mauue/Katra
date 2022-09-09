@@ -9,6 +9,7 @@ public class Rule {
     int priority;
     Edge edge;
     PacketSet match;
+    PacketSet notMatch;
     PacketSet hit;
     Transformation modify;
 
@@ -39,6 +40,7 @@ public class Rule {
 //        this.nv = e.nv;
 
         this.behavior = new Behavior(e, t);
+        this.notMatch = match.not();
     }
 
     public Rule(int p, Edge e, PacketSet match, Transformation t, long ip){
@@ -62,7 +64,9 @@ public class Rule {
     public PacketSet getMatch() {
         return match;
     }
-
+    public PacketSet getNotMatch() {
+        return notMatch;
+    }
     public PacketSet getHit() {
         return hit;
     }

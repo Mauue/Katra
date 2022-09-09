@@ -108,6 +108,7 @@ public class HeaderType {
                 IPPrefix i = entry.getValue();
                 int temp = encodePrefix(i.getIP(), i.getPrefix(), varsArray, elements.get(name));
                 result = bdd.andTo(result, temp);
+                bdd.deref(temp);
             }
         }
         return new PacketSet(result);
@@ -139,10 +140,11 @@ public class HeaderType {
         long[] max = new long[size];
         int i = 0;
         int cube;
+        bdd.ref(predicate);
         for(Map.Entry<String, Integer> entry: elements.entrySet()){
             String name = entry.getKey();
             cube = forallElement.get(name);
-            predicate = bdd.exists(predicate, cube);
+            predicate = bdd.ref(bdd.exists(predicate, cube));
             int len = entry.getValue();
             int index = elementVarIndex.get(name);
             min[i] = findMinRec(predicate, index, index, len, 0L);

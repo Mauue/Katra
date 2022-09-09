@@ -2,7 +2,6 @@ package verifier.util;
 
 import jdd.bdd.BDD;
 import verifier.HeaderType;
-import verifier.NetworkVerifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +10,7 @@ import java.util.Objects;
 public class PacketSet {
     int predicate;
     static BDD bdd = HeaderType.headerType.bdd;
-    static Map<Integer, BoundingVolume> bvMap = new HashMap<>(10000);
+    static Map<Integer, BoundingVolume> bvMap = new HashMap<>(100000);
 
 
     public PacketSet(int predicate){
@@ -22,7 +21,7 @@ public class PacketSet {
         this.predicate = ps.predicate;
     }
 
-    public static BoundingVolume updateBoundingVolume(int predicate){
+    public static BoundingVolume getBoundingVolume(int predicate){
         if(!bvMap.containsKey(predicate)) {
             BoundingVolume bv = HeaderType.getBoundingVolume(predicate);
             bvMap.put(predicate, bv);
@@ -57,8 +56,8 @@ public class PacketSet {
         if(this.predicate==0 || ps.predicate == 0) return false;
         if(this.predicate==1 || ps.predicate == 1) return true;
         if(this.predicate == ps.predicate) return true;
-        BoundingVolume bv1 = updateBoundingVolume(ps.predicate);
-        BoundingVolume bv2 = updateBoundingVolume(this.predicate);
+        BoundingVolume bv1 = getBoundingVolume(ps.predicate);
+        BoundingVolume bv2 = getBoundingVolume(this.predicate);
         if(bv1.isIntersection(bv2)){
             return !this.and(ps).isEmpty();
         }
@@ -77,6 +76,9 @@ public class PacketSet {
         return predicate == packetSet.predicate;
     }
 
+    public void release(){
+        bdd.deref(predicate);
+    }
     @Override
     public int hashCode() {
         return Objects.hash(predicate);
@@ -86,6 +88,6 @@ public class PacketSet {
     public String toString() {
         if(predicate == 0) return "0[null]";
         if(predicate == 1) return "1[all]";
-        return predicate + HeaderType.printBV(updateBoundingVolume(predicate));
+        return predicate + HeaderType.printBV(getBoundingVolume(predicate));
     }
 }

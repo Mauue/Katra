@@ -4,6 +4,7 @@ import verifier.Edge;
 import verifier.NetworkVerifier;
 import verifier.Node;
 import verifier.Rule;
+import verifier.transformation.Transformation;
 import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
 import verifier.util.URule;
@@ -67,7 +68,6 @@ public class Loader {
     }
     public void readFibFile(Node node, String filename) {
         List<URule> rules = new LinkedList<>();
-        List<Vector<Long>> pairs = new LinkedList<>();
         try {
             File file = new File(filename);
             InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
@@ -88,20 +88,11 @@ public class Loader {
                     URule r;
 //                    PacketSet p = nv.createPrefix("dstip", ip, prefix);
                     if(edge == null) {
-                        r = new URule(32-prefix, node.getSelfEdge(), ip, prefix);
+                        r = new URule(32-prefix, node.getSelfEdge(), ip, prefix, nv.getTDelv());
                     }else {
-                        r = new URule(32 - prefix, edge, ip, prefix);
+                        r = new URule(32 - prefix, edge, ip, prefix, nv.getTID());
                     }
                     rules.add(r);
-                }
-                if (token[0].equals("nat")) {
-                    long match = Long.parseLong(token[1]);
-                    int matchLength = Integer.parseInt(token[2]);
-                    long target = Long.parseLong(token[3]);
-                    int targetLength = Integer.parseInt(token[4]);
-                    Vector<Long> l = new Vector<>(4);
-                    l.add(match); l.add((long) matchLength); l.add(target); l.add((long) targetLength);
-                    pairs.add(l);
                 }
             }
         } catch (IOException e) {
@@ -110,6 +101,31 @@ public class Loader {
         nv.addURules(rules);
     }
 
+    public void readTunnelFile(String filename) {
+        List<URule> rules = new LinkedList<>();
+        try {
+            File file = new File(filename);
+            InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                String[] token = line.split("\\s+");
+                Node src = nv.nodes.get(token[0]);
+                Node dst = nv.nodes.get(token[1]);
+
+                int prefix = Integer.parseInt(token[4]);
+                IPPrefix matchIP = new IPPrefix(Long.parseLong(token[2]), prefix);
+                IPPrefix targetIP = new IPPrefix(Long.parseLong(token[3]), prefix);
+                Transformation push = nv.getTSeq(nv.getTPush(), nv.getTSet(targetIP));
+                rules.add(new URule(2, src.getSelfEdge(), matchIP, push));
+                rules.add(new URule(1, dst.getSelfEdge(), targetIP, nv.getTPop()));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        nv.addURules(rules);
+    }
     private void addTopology(String d1, String p1, String d2, String p2) {
         List<Node> ns = nv.getOrAddNodes(d1, d2);
         Node node1 = ns.get(0);

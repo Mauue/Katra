@@ -129,6 +129,10 @@ public class NetworkVerifier {
         return new TSet(this, p);
     }
 
+    public Transformation getTSet(IPPrefix p){
+        return new TSet(this, p);
+    }
+
     public Transformation getTSeq(Transformation... transformations){
         return new TSeq(this, transformations);
     }
@@ -181,7 +185,7 @@ public class NetworkVerifier {
     private void updateRule(){
         if(!uRules.isEmpty()){
             for(URule uRule: uRules){
-                Rule r = new Rule(uRule.priority, uRule.edge, createPrefix("dstip", uRule.ipPrefix), uRule.edge.isSelf?getTDelv():getTID());
+                Rule r = new Rule(uRule.priority, uRule.edge, createPrefix("dstip", uRule.ipPrefix), uRule.modify);
                 r.setPrefixRule(uRule.ipPrefix);
                 rules.add(r);
             }
@@ -189,6 +193,7 @@ public class NetworkVerifier {
     }
     public void calInitPEC(){
         long s0 = System.nanoTime();
+        Transformation.updateAll();
         updateRule();
         long s1 = System.nanoTime();
         initializeModelAndRules();
@@ -246,6 +251,8 @@ public class NetworkVerifier {
                     oldPs = predMap.get(to);
                     newPs = oldPs.xor(intersection);
                     predMap.replace(to, newPs);
+                    oldPs.release();
+                    intersection.release();
                 } else {
                     predMap.put(new Behaviors(to.behaviors), intersection);
                 }
@@ -327,7 +334,7 @@ public class NetworkVerifier {
         Node node = rule.getNode();
         for (Rule r : node.addAndGetAllUntil(rule)) {
             if (r.isPriorityThan(rule)) {
-                PacketSet newHit = rule.getHit().and(r.getMatch().not());
+                PacketSet newHit = rule.getHit().and(r.getNotMatch());
 
                 rule.setHit(newHit);
             }
@@ -342,6 +349,7 @@ public class NetworkVerifier {
                 PacketSet tmp = intersection.not();
                 PacketSet newHit = r.getHit().and(tmp);
                 r.setHit(newHit);
+                tmp.release();
             }
         }
     }

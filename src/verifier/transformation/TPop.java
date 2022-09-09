@@ -17,6 +17,7 @@ public class TPop extends Transformation{
     }
     @Override
     public HeaderStack transform(HeaderStack s) {
+        if(s.getLen()==1) return null;
         return s.bot();
     }
 
