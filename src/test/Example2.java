@@ -18,8 +18,8 @@ public class Example2 {
         Map<String, Integer> headerSettings = new HashMap<>();
         headerSettings.put("dstip", 32);
 //        headerSettings.put("ttl", 8);
-
-        HeaderType.update(headerSettings);
+        HeaderType headerType = new HeaderType();
+        headerType.update(headerSettings);
         NetworkVerifier nv = new NetworkVerifier();
 
         // build the network topology
@@ -87,8 +87,8 @@ public class Example2 {
 
         for(PacketSet p: nv.getPecs()) {
             System.out.println("check pec:" +p);
-            Trace trace = nv.checkProperty(p, Collections.singletonList(v1), checks);
-            if (trace != null) trace.print();
+            List<Trace> trace = nv.checkProperty(p, Collections.singletonList(v1), checks);
+            if (trace != null) trace.forEach(Trace::print);
         }
 
     }

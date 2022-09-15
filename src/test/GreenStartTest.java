@@ -15,6 +15,7 @@ public class GreenStartTest {
 
     public static GreenStartTest instance = new GreenStartTest();
     static List<Long> timeList = new LinkedList<>();
+    static List<Long> s1TimeList = new LinkedList<>();
     int times = 0;
     String network;
     boolean readTunnel=true;
@@ -48,51 +49,66 @@ public class GreenStartTest {
     public void greenStart(){
         for(int i=0;i<times;i++) {
             System.out.println(i);
-            init();
+            long t0 = System.nanoTime();
+            HeaderType headerType = init();
+            long t1 = System.nanoTime();
+            System.out.println("init time: " + (t1-t0)/1000000.0);
             Loader loader = new Loader();
+            loader.nv.headerType = headerType;
             loader.setTopologyByFile(network+"/" +network + ".topology");
             loader.readSpaceFile(network+"/" +network +".space");
-            loader.readFibDict(network+ "/rule/");
+            loader.readFibDict(network+ "/ruleExp/");
             if (readTunnel)
                 loader.readTunnelFile(network+"/"+network + "." +tunnelNumber +".tunnel");
-            verification(loader.nv);
+            long  t =verification(loader.nv);
+            timeList.add(t+(t1-t0));
             System.gc();
+            Node.cnt = 0;
         }
+        System.out.println("build avg time:" + Utility.avg(s1TimeList)/1000000.0 + "ms");
         System.out.println("avg time:" + Utility.avg(timeList)/1000000.0 + "ms");
     }
 
 
-    static void init(){
-        HeaderType.init();
+    static HeaderType init(){
+        HeaderType headerType = new HeaderType();
         Map<String, Integer> headerSettings = new HashMap<>();
         headerSettings.put("dstip", 32);
+        headerSettings.put("srcip", 32);
+        headerSettings.put("srcport", 16);
+        headerSettings.put("dstport", 16);
+        headerSettings.put("protocol", 8);
 //        headerSettings.put("ttl", 8);
-        HeaderType.update(headerSettings);
+        headerType.update(headerSettings);
+        return headerType;
     }
-    static void verification(NetworkVerifier nv){
+    static long verification(NetworkVerifier nv){
         long s1 = System.nanoTime();
         nv.calInitPEC();
+        long m = System.nanoTime();
 //        System.out.println(nv.getPecs());
-        nv.nodes.values().forEach(Node::updateSpacePEC);
-        List<Check> checks = new LinkedList<>();
-        for(Node src: nv.nodes.values()) {
-            for(Node dst: nv.nodes.values()) {
-                if(src.equals(dst)) continue;
-                for(PacketSet pec: dst.getSpacePEC()) {
-                    checks.clear();
-                    checks.add(new ReachabilityCheck(nv.allHeaders(), dst, nv));
-                    Trace trace = nv.checkProperty(pec, Collections.singletonList(src), checks);
-//                    System.out.println(src + " --> " + dst + " trace:");
-//                    if(trace != null)
-//                        trace.print();
-//                    else
-//                        System.out.println("null");
-                }
-            }
-        }
+//        nv.nodes.values().forEach(Node::updateSpacePEC);
+//        List<Check> checks = new LinkedList<>();
+//        for(Node src: nv.nodes.values()) {
+////            System.out.println(src.getSpacePEC());
+//            for(Node dst: nv.nodes.values()) {
+//                if(src.equals(dst)) continue;
+//                for(PacketSet pec: nv.getPecs()) {
+//                    checks.clear();
+//                    checks.add(new ReachabilityCheck(nv.allHeaders(), dst, nv));
+//                    List<Trace> trace = nv.checkProperty(pec, Collections.singletonList(src), checks);
+////                    System.out.println(src + " --> " + dst + " trace:");
+////                    if(trace != null)
+////                        trace.print();
+////                    else
+////                        System.out.println("null");
+//                }
+//            }
+//        }
         long s2 = System.nanoTime();
-        System.out.println(s2-s1);
-        timeList.add(s2-s1);
+        s1TimeList.add(m-s1);
+        return s2-s1;
+
     }
 }
 

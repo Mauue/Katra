@@ -7,11 +7,13 @@ import verifier.util.PacketSet;
 
 public class TSet extends Transformation{
     PacketSet p;
+    PacketSet not_p;
     IPPrefix ipPrefix;
 
     public TSet(NetworkVerifier nv, PacketSet p) {
         super(nv);
         this.p = p;
+        this.not_p = p.not();
     }
 
     public TSet(NetworkVerifier nv, IPPrefix p) {
@@ -24,11 +26,21 @@ public class TSet extends Transformation{
     @Override
     protected void update(){
         this.p = nv.createPrefix("dstip", ipPrefix);
+        this.not_p = this.p.not();
     }
 
     @Override
     public HeaderStack transform(HeaderStack s) {
-        return s.pop().push(p);
+        PacketSet header = s.top();
+
+        PacketSet intersection = header.and(p);
+        if(!intersection.isEmpty()){
+            PacketSet tmp1 = header.and(not_p);
+            PacketSet res = tmp1.or(p);
+            tmp1.release();
+            return s.pop().push(res);
+        }
+        return s;
     }
 
     @Override

@@ -16,9 +16,9 @@ public class Example {
     public static void main(String[] args) {
         Map<String, Integer> headerSettings = new HashMap<>();
         headerSettings.put("dstip", 32); headerSettings.put("srcip", 32);
-
+        HeaderType headerType = new HeaderType();
         // instantiate a new network verifier
-         HeaderType.update(headerSettings);
+        headerType.update(headerSettings);
         NetworkVerifier nv = new NetworkVerifier();
 
         // build the network topology

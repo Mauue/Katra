@@ -14,8 +14,8 @@ public class Trie {
     }
 
     public ArrayList<Rule> addAndGetAllOverlappingWith(Rule rule) {
+//        if(!rule.isPrefix || notPrefix) return _addAndGetAllOverlappingWith(rule);
         TrieNode t = this.root;
-        if(!rule.isPrefix || notPrefix) return _addAndGetAllOverlappingWith(rule);
         ArrayList<Rule> ret = new ArrayList<>(t.getRules());
 
         long dstIp = rule.ip;

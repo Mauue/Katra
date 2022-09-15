@@ -8,7 +8,7 @@ import verifier.util.*;
 import java.util.*;
 
 public class NetworkVerifier {
-    HeaderType headerType;
+    public HeaderType headerType;
     public Map<String, Node> nodes;
     List<Edge> edges;
     List<Rule> rules;
@@ -26,8 +26,6 @@ public class NetworkVerifier {
         behaviorMap = new HashMap<>();
         pecs = new HashSet<>();
         edges = new LinkedList<>();
-        headerType = HeaderType.headerType;
-        headerType.setNv(this);
         uRules = new LinkedList<>();
     }
 
@@ -35,7 +33,7 @@ public class NetworkVerifier {
         return headerType.createRange(r);
     }
     public PacketSet createPrefix(Map<String, IPPrefix> p){
-        return HeaderType.createPrefix(p);
+        return headerType.createPrefix(p);
     }
 
     public PacketSet createPrefix(String name, Long ip, int prefix){
@@ -97,11 +95,11 @@ public class NetworkVerifier {
     }
 
     public PacketSet allHeaders(){
-        return HeaderType.allHeader();
+        return headerType.allHeader();
     }
 
     public PacketSet zeroHeaders(){
-        return HeaderType.zeroHeader();
+        return headerType.zeroHeader();
     }
 
 
@@ -182,6 +180,11 @@ public class NetworkVerifier {
             return 1;
         }
     };
+    private void updateSpace(){
+        for(Node node:nodes.values()){
+            node.updateSpace();
+        }
+    }
     private void updateRule(){
         if(!uRules.isEmpty()){
             for(URule uRule: uRules){
@@ -192,20 +195,23 @@ public class NetworkVerifier {
         }
     }
     public void calInitPEC(){
-        long s0 = System.nanoTime();
-        Transformation.updateAll();
+        long t1 = System.nanoTime();
+//        updateSpace();
+//        Transformation.updateAll();
         updateRule();
-        long s1 = System.nanoTime();
+
         initializeModelAndRules();
         Collections.sort(rules, comp);
-        long s2 = System.nanoTime();
-
         Changes changes = new Changes();
         for (Rule rule : rules) {
             identifyChangesInsert(rule, changes);
         }
-        long s3 = System.nanoTime();
+        long t2 = System.nanoTime();
         update2(changes);
+        long t3 = System.nanoTime();
+        System.out.println("model rule time " + (t2-t1)/1000000.0 + " ms");
+        System.out.println("update time " + (t3-t2)/1000000.0 + " ms");
+
     }
 
     public void initializeModelAndRules() {
@@ -222,17 +228,18 @@ public class NetworkVerifier {
         }
         Behaviors key = new Behaviors(ports);
         predMap.put(key, allHeaders());
-
     }
 
     public void update2(Changes changes){
         changes.aggrBDDs();
-
-        Set<Behaviors> deletion = new HashSet<>();
+        int count = 0;
         for (Map.Entry<PacketSet, ArrayList<Pair<Behavior, Behavior>>> entryI : changes.getAll().entrySet()) {
-            HashMap<Behaviors, PacketSet> oldPred = (HashMap<Behaviors, PacketSet>)((HashMap<Behaviors, PacketSet>) predMap).clone();
+            count++;
 //            System.out.println(change);
+            Set<Behaviors> deletion = new HashSet<>();
             Behavior filterBehavior = entryI.getValue().get(0).getFirst();
+
+            HashMap<Behaviors, PacketSet> oldPred = (HashMap<Behaviors, PacketSet>)((HashMap<Behaviors, PacketSet>) predMap).clone();
             for(Map.Entry<Behaviors, PacketSet> entry: oldPred.entrySet()){
                 Behaviors from = entry.getKey();
 
@@ -243,6 +250,7 @@ public class NetworkVerifier {
                 if(intersection.isEmpty()) continue;
 
                 PacketSet newPs = oldPs.xor(intersection);
+                newPs.increase();
                 predMap.replace(from, newPs);
                 if (newPs.isEmpty()) deletion.add(from);
 
@@ -250,40 +258,40 @@ public class NetworkVerifier {
                 if (predMap.containsKey(to)) {
                     oldPs = predMap.get(to);
                     newPs = oldPs.xor(intersection);
-                    predMap.replace(to, newPs);
                     oldPs.release();
-                    intersection.release();
+                    predMap.replace(to, newPs);
                 } else {
+                    intersection.increase();
                     predMap.put(new Behaviors(to.behaviors), intersection);
                 }
 
                 from.reverseArray(entryI.getValue());
+                intersection.release();
             }
 
             for (Behaviors t : deletion) {
                 if (predMap.containsKey(t) && predMap.get(t).isEmpty()) predMap.remove(t);
             }
         }
+        changes.releaseBdd();
         predMap.forEach((k, v)-> {behaviorMap.put(v, k); pecs.add(v);});
 //        System.out.println(predMap.size());
-//        System.out.println(predMap);
+        System.out.println(count);
     }
 
-    public Trace checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){
-        List<VNode> visited = new LinkedList<>();
+    public List<Trace> checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){
+        List<Trace> traces = new LinkedList<>();
         for(Node s: source){
+            List<VNode> visited = new LinkedList<>();
             VNode u = new VNode(s, pec, new HeaderStack(this, pec));
-            if(!visited.contains(u)){
-                u.previous = null;
-                Trace trace = dfs(visited, u, 0, checks);
-                if(trace != null)
-                    return trace;
-            }
+            u.previous = null;
+            dfs(visited, u, 0, checks, traces);
+
         }
-        return null;
+        return traces;
     }
 
-    private Trace dfs(List<VNode> visited, VNode u, int i, List<Check> checks){
+    private void dfs(List<VNode> visited, VNode u, int i, List<Check> checks, List<Trace> traces){
         Behavior b = forward(u.getLoc(), u.getEc());
         Edge e = b.e;
         Transformation t = b.t;
@@ -291,10 +299,9 @@ public class NetworkVerifier {
 
         if (s == null || e.tgt() == null) {
             if(satisfyProperty(u, t, checks)){
-                return u.getTrace();
-            }else{
-                return null;
+                traces.add(u.getTrace());
             }
+            return;
         }
 
         List<Hop> nextHops = new LinkedList<>();
@@ -314,28 +321,24 @@ public class NetworkVerifier {
             VNode v = hop.u;
             v.setPrevious(new Hop(t, u));
             if(hasLoop(v, visited))
-                return v.getTrace();
+                continue;
 
             if(!visited.contains(v)){
-                Trace trace = dfs(visited, v, i+1, checks);
-                if (trace != null){
-                    return trace;
-                }
+                dfs(visited, v, i+1, checks, traces);
             }
         }
-
-        return null;
     }
 
     public void identifyChangesInsert(Rule rule, Changes changes) {
 //        int entryBdd = this.model.bddEngine.encodeDstIPPrefix(rule.getDstIp(), rule.getPriority());
 //        rule.setNMatch(bdd.ref(bdd.not(entryBdd)));
-//        rule.setHit(entryBdd);
         Node node = rule.getNode();
-        for (Rule r : node.addAndGetAllUntil(rule)) {
+        List<Rule> rules = node.addAndGetAllUntil(rule);
+
+        for (Rule r : rules) {
             if (r.isPriorityThan(rule)) {
                 PacketSet newHit = rule.getHit().and(r.getNotMatch());
-
+                rule.getHit().release();
                 rule.setHit(newHit);
             }
 
@@ -348,8 +351,11 @@ public class NetworkVerifier {
 
                 PacketSet tmp = intersection.not();
                 PacketSet newHit = r.getHit().and(tmp);
-                r.setHit(newHit);
                 tmp.release();
+                intersection.release();
+
+                r.getHit().release();
+                r.setHit(newHit);
             }
         }
     }

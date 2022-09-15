@@ -6,11 +6,9 @@ import verifier.HeaderStack;
 import java.util.Objects;
 
 public class TId extends Transformation{
-    static TId object = null;
 
     public static TId getTId(NetworkVerifier nv){
-        if(object == null) object = new TId(nv);
-        return object;
+        return new TId(nv);
     }
     TId(NetworkVerifier nv) {
         super(nv);

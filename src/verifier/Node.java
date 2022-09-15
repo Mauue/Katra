@@ -18,6 +18,7 @@ public class Node {
     Edge selfEdge;
 
     PacketSet space;
+    List<IPPrefix> spaceList;
     Collection<PacketSet> spacePEC;
     public int uid;
     public Node(String name, NetworkVerifier nv){
@@ -33,6 +34,7 @@ public class Node {
         selfEdge = new Edge(this, this);
         space = nv.zeroHeaders();
         spacePEC = new LinkedList<>();
+        spaceList = new LinkedList<>();
     }
 
     public String getName() {
@@ -75,7 +77,15 @@ public class Node {
         this.space = nv.zeroHeaders();
     }
     public void addSpace(IPPrefix ip){
-        this.space = this.space.or(nv.createPrefix("dstip", ip));
+        this.spaceList.add(ip);
+    }
+
+    public void updateSpace(){
+        for(IPPrefix ipPrefix:spaceList){
+            PacketSet s = nv.createPrefix("dstip", ipPrefix);
+            this.space = this.space.or(s);
+            s.release();
+        }
     }
 
     public PacketSet getSpace() {
@@ -92,10 +102,6 @@ public class Node {
     }
     public ArrayList<Rule> addAndGetAllUntil(Rule rule) {
         ArrayList<Rule> res = this.rules.addAndGetAllOverlappingWith(rule);
-//        System.out.println("========================================");
-//        System.out.println("insert:" + rule);
-//        System.out.println("overlap:" + res);
-//        System.out.println("========================================");
         return res;
     }
 

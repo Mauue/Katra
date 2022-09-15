@@ -23,8 +23,10 @@ public class Changes {
             PacketSet oldBdd = newPortToBdd.get(newPort);
             PacketSet union = oldBdd.or(deltaBdd);
             newPortToBdd.replace(newPort, union);
+            oldBdd.release();
         } else {
             newPortToBdd.put(newPort, deltaBdd);
+            deltaBdd.increase();
         }
     }
 
@@ -32,7 +34,13 @@ public class Changes {
         return bddToChanges;
     }
 
-
+    public void releaseBdd() {
+        for (HashMap<Behavior, PacketSet> value : oldToNewBehavior.values()) {
+            for (PacketSet bdd : value.values()) {
+                bdd.release();
+            }
+        }
+    }
     public void aggrBDDs() {
         bddToChanges = new HashMap<>();
         for (Map.Entry<Behavior, HashMap<Behavior, PacketSet>> entryI : oldToNewBehavior.entrySet()){

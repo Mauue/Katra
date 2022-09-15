@@ -6,14 +6,12 @@ import verifier.HeaderStack;
 import java.util.Objects;
 
 public class TDrop extends Transformation{
-    static TDrop object = null;
     TDrop(NetworkVerifier nv) {
         super(nv);
     }
 
     public static TDrop getTDrop(NetworkVerifier nv){
-        if(object == null) object = new TDrop(nv);
-        return object;
+        return new TDrop(nv);
     }
     @Override
     public HeaderStack transform(HeaderStack s) {

@@ -19,35 +19,42 @@ public class Loader {
         nv = new NetworkVerifier();
     }
 
-    public void setTopologyByFile(String filepath){
+    public long setTopologyByFile(String filepath){
         File file;
         InputStreamReader isr = null;
         BufferedReader br = null;
+        long res = 0;
         try {
             file = new File(filepath);
             isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
             br = new BufferedReader(isr);
             String line;
-
             while ((line = br.readLine()) != null) {
                 String[] token = line.split(" ");
+                long s1 = System.nanoTime();
                 addTopology(token[0], token[1], token[2], token[3]);
+                long s2 = System.nanoTime();
+                res += s2-s1;
             }
             isr.close();
 
         }catch (Exception e){
             e.printStackTrace();
         }
+        return res;
     }
 
-    public void readFibDict(String dirname){
+    public long readFibDict(String dirname){
+        long res = 0;
         for(Map.Entry<String, Node> entry: nv.nodes.entrySet()){
             Node node = entry.getValue();
             String name = entry.getKey();
-            readFibFile(node, dirname+name);
+            res += readFibFile(node, dirname+name);
         }
+        return res;
     }
-    public void readSpaceFile(String filename) {
+    public long readSpaceFile(String filename) {
+        int res = 0;
         nv.nodes.values().forEach(Node::clearSpace);
         try {
             File file = new File(filename);
@@ -64,10 +71,12 @@ public class Loader {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return res;
 //        nv.nodes.values().forEach(n->System.out.println(n.getSpace()));
     }
-    public void readFibFile(Node node, String filename) {
+    public long readFibFile(Node node, String filename) {
         List<URule> rules = new LinkedList<>();
+        long res = 0;
         try {
             File file = new File(filename);
             InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
@@ -84,6 +93,7 @@ public class Loader {
 
                     long ip = Long.parseLong(token[1]);
                     int prefix = Integer.parseInt(token[2]);
+                    long s1 = System.nanoTime();
                     Edge edge = node.getEdge(forward);
                     URule r;
 //                    PacketSet p = nv.createPrefix("dstip", ip, prefix);
@@ -93,16 +103,20 @@ public class Loader {
                         r = new URule(32 - prefix, edge, ip, prefix, nv.getTID());
                     }
                     rules.add(r);
+                    long s2 = System.nanoTime();
+                    res += s2-s1;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
         nv.addURules(rules);
+        return res;
     }
 
-    public void readTunnelFile(String filename) {
+    public long readTunnelFile(String filename) {
         List<URule> rules = new LinkedList<>();
+        long res = 0;
         try {
             File file = new File(filename);
             InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
@@ -117,14 +131,18 @@ public class Loader {
                 int prefix = Integer.parseInt(token[4]);
                 IPPrefix matchIP = new IPPrefix(Long.parseLong(token[2]), prefix);
                 IPPrefix targetIP = new IPPrefix(Long.parseLong(token[3]), prefix);
+                long s1 = System.nanoTime();
                 Transformation push = nv.getTSeq(nv.getTPush(), nv.getTSet(targetIP));
                 rules.add(new URule(2, src.getSelfEdge(), matchIP, push));
                 rules.add(new URule(1, dst.getSelfEdge(), targetIP, nv.getTPop()));
+                long s2 = System.nanoTime();
+                res += s2-s1;
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
         nv.addURules(rules);
+        return res;
     }
     private void addTopology(String d1, String p1, String d2, String p2) {
         List<Node> ns = nv.getOrAddNodes(d1, d2);

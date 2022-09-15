@@ -15,13 +15,12 @@ public class HeaderType {
     Map<String, Integer> elementIndex;
     Map<String, Integer> forallElement; // jdd-forall
 
-    static PacketSet all = null;
-    static PacketSet zero = null;
-    public static HeaderType headerType = null;
+    PacketSet all = null;
+    PacketSet zero = null;
 
     int length;
     int size;
-    HeaderType(){
+    public HeaderType(){
         bdd = new BDD(10000, 10000);
         elementVarIndex = new HashMap<>();
         elementsVar = new HashMap<>();
@@ -31,43 +30,40 @@ public class HeaderType {
 
     }
 
-    public static void init(){
-        headerType = new HeaderType();
-    }
-
 //    public HeaderType(Map<String, Integer> e){
 //        this();
 //        update(e);
 //    }
-    public static void update(Map<String, Integer> e){
-        headerType.elements = new LinkedHashMap<>(e);
+    public void update(Map<String, Integer> e){
+        elements = new LinkedHashMap<>(e);
 
-        headerType.size = e.size();
-        headerType.elements.forEach((s, l)-> {
-            headerType.elementVarIndex.put(s, headerType.length);
-            headerType.length += l;
-            int[] array = new int[headerType.length];
-            headerType.declareVars(array, headerType.length);
-            headerType.elementsVar.put(s, array);
-            headerType.elementIndex.put(s, headerType.elementIndex.size());
+        size = e.size();
+        elements.forEach((s, l)-> {
+            elementVarIndex.put(s, length);
+            length += l;
+            int[] array = new int[length];
+            declareVars(array, length);
+            elementsVar.put(s, array);
+            elementIndex.put(s, elementIndex.size());
         });
         int last = 1;
-        for (Map.Entry<String, Integer> entry : headerType.elements.entrySet()) {
+        for (Map.Entry<String, Integer> entry : elements.entrySet()) {
             String s = entry.getKey();
-            headerType.forallElement.put(s, last);
-            int[] array = headerType.elementsVar.get(s);
+            forallElement.put(s, last);
+            int[] array = elementsVar.get(s);
             for (Integer i : array) {
-                last = headerType.bdd.andTo(last, i);
+                last = bdd.andTo(last, i);
             }
-            headerType.bdd.ref(last);
+            bdd.ref(last);
         }
 
         all = new PacketSet(1);
         zero = new PacketSet(0);
+        PacketSet.bdd = bdd;
     }
 
-    public static PacketSet createSingle(Map<String, Integer> s){
-        return headerType._createSingle(s);
+    public PacketSet createSingle(Map<String, Integer> s){
+        return _createSingle(s);
     }
 
     PacketSet _createSingle(Map<String, Integer> s){
@@ -84,8 +80,8 @@ public class HeaderType {
         return new PacketSet(result);
     }
 
-    public static PacketSet createRange(Map<String, Range> s){
-        return headerType._createRange(s);
+    public PacketSet createRange(Map<String, Range> s){
+        return _createRange(s);
     }
     PacketSet _createRange(Map<String, Range> ranges){
         // TODO
@@ -96,8 +92,8 @@ public class HeaderType {
         }
         return null;
     }
-    public static PacketSet createPrefix(Map<String, IPPrefix> p){
-        return headerType._createPrefix(p);
+    public PacketSet createPrefix(Map<String, IPPrefix> p){
+        return _createPrefix(p);
     }
     PacketSet _createPrefix(Map<String, IPPrefix> p){
         int result = 1;
@@ -114,24 +110,18 @@ public class HeaderType {
         return new PacketSet(result);
     }
 
-    public void setNv(NetworkVerifier nv){
-        this.nv = nv;
-    }
 
-    public NetworkVerifier getNv() {
-        return nv;
-    }
 
-    public static PacketSet allHeader(){
+    public PacketSet allHeader(){
         return all;
     }
 
-    public static PacketSet zeroHeader(){
+    public PacketSet zeroHeader(){
         return zero;
     }
 
-    public static BoundingVolume getBoundingVolume(int predicate){
-        return headerType._getBoundingVolume(predicate);
+    public BoundingVolume getBoundingVolume(int predicate){
+        return _getBoundingVolume(predicate);
     }
 
     public BoundingVolume _getBoundingVolume(int predicate){
@@ -192,13 +182,13 @@ public class HeaderType {
         return findMinRec(high, level+1, start, len, now);
 
     }
-    public static String printBV(PacketSet ps){
+    public String printBV(PacketSet ps){
         return printBV(getBoundingVolume(ps.getPredicate()));
     }
-    public static String printBV(BoundingVolume bv){
+    public String printBV(BoundingVolume bv){
         StringBuilder sb = new StringBuilder();
         int i=0;
-        for(String name: headerType.elements.keySet()){
+        for(String name: elements.keySet()){
             sb.append(String.format("%s: [%d - %d] ", name, bv.min[i], bv.max[i]));
             i++;
         }

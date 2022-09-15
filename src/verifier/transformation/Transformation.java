@@ -8,7 +8,7 @@ import java.util.List;
 
 public abstract class Transformation {
 
-    final static String name = "abstract";
+    final String name = "abstract";
     NetworkVerifier nv;
 
     static List<Transformation> toBeUpdated = new LinkedList<>();

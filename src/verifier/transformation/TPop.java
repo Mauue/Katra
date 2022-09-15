@@ -6,14 +6,12 @@ import verifier.HeaderStack;
 import java.util.Objects;
 
 public class TPop extends Transformation{
-    static TPop object = null;
     TPop(NetworkVerifier nv) {
         super(nv);
     }
 
     public static TPop getTPop(NetworkVerifier nv){
-        if(object == null) object = new TPop(nv);
-        return object;
+        return new TPop(nv);
     }
     @Override
     public HeaderStack transform(HeaderStack s) {

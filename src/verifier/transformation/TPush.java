@@ -4,11 +4,9 @@ import verifier.NetworkVerifier;
 import verifier.HeaderStack;
 
 public class TPush extends Transformation{
-    static TPush object = null;
 
     public static TPush getTPush(NetworkVerifier nv){
-        if(object == null) object = new TPush(nv);
-        return object;
+        return new TPush(nv);
     }
     TPush(NetworkVerifier nv) {
         super(nv);
