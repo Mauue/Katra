@@ -6,7 +6,7 @@ import verifier.HeaderStack;
 import java.util.Objects;
 
 public class TDrop extends Transformation{
-    TDrop(NetworkVerifier nv) {
+    public TDrop(NetworkVerifier nv) {
         super(nv);
     }
 
@@ -20,7 +20,7 @@ public class TDrop extends Transformation{
 
     @Override
     public boolean equals(Object obj) {
-        return Objects.equals(obj.toString(), this.toString());
+        return Objects.equals(obj.getClass(), this.getClass());
     }
 
     @Override

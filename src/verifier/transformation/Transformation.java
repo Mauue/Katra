@@ -5,6 +5,7 @@ import verifier.HeaderStack;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class Transformation {
 
@@ -26,5 +27,4 @@ public abstract class Transformation {
         }
         toBeUpdated.clear();
     }
-
 }

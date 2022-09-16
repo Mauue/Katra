@@ -19,21 +19,34 @@ public class Trie {
         ArrayList<Rule> ret = new ArrayList<>(t.getRules());
 
         long dstIp = rule.ip;
-        long bit = 1L << 31;
+//        long bit = 1L << 31;
         for (int i = 0; i < rule.prefix; i++) {
-
-            boolean flag = (bit & dstIp) == 0;
-            t = t.getNext(flag ? 0 : 1);
-            bit >>=1;
+            long bit = (dstIp >> (31 - i)) & 1;
+            t = t.getNext(bit == 0 ? 0 : 1);
             ret.addAll(t.getRules());
         }
 
         t.explore(ret);
         t.add(rule);
-        rules.add(rule);
+//        rules.add(rule);
         return ret;
     }
+    public ArrayList<Rule> getAllOverlappingWith(Rule rule) {
+//        if(!rule.isPrefix || notPrefix) return _addAndGetAllOverlappingWith(rule);
+        TrieNode t = this.root;
+        ArrayList<Rule> ret = new ArrayList<>(t.getRules());
 
+        long dstIp = rule.ip;
+//        long bit = 1L << 31;
+        for (int i = 0; i < rule.prefix; i++) {
+            long bit = (dstIp >> (31 - i)) & 1;
+            t = t.getNext(bit == 0 ? 0 : 1);
+            ret.addAll(t.getRules());
+        }
+
+        t.explore(ret);
+        return ret;
+    }
     private ArrayList<Rule> _addAndGetAllOverlappingWith(Rule rule) {
         ArrayList<Rule> result = new ArrayList<>();
         for(Rule rule1: rules){

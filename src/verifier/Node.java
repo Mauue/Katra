@@ -105,6 +105,10 @@ public class Node {
         return res;
     }
 
+    public ArrayList<Rule> getAllUntil(Rule rule) {
+        ArrayList<Rule> res = this.rules.getAllOverlappingWith(rule);
+        return res;
+    }
     public Edge getSelfEdge(){
         if(selfEdge == null){
             selfEdge = nv.getOrAddBiEdge(this, this).getFirst();

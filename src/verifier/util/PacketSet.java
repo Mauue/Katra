@@ -2,6 +2,7 @@ package verifier.util;
 
 import jdd.bdd.BDD;
 import verifier.HeaderType;
+import verifier.NetworkVerifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,8 +11,9 @@ import java.util.Objects;
 public class PacketSet {
     int predicate;
     public static BDD bdd;
-     Map<Integer, BoundingVolume> bvMap = new HashMap<>(100000);
+    public static Map<Integer, BoundingVolume> bvMap = new HashMap<>(100000);
 
+    public static NetworkVerifier networkVerifier;
 
     public PacketSet(int predicate){
         this.predicate = predicate;
@@ -21,14 +23,16 @@ public class PacketSet {
         this.predicate = ps.predicate;
     }
 
-    public BoundingVolume getBoundingVolume(int predicate){
+    public static BoundingVolume getBoundingVolume(int predicate){
         if(!bvMap.containsKey(predicate)) {
-            BoundingVolume bv = getBoundingVolume(predicate);
+            BoundingVolume bv = networkVerifier.headerType.getBoundingVolume(predicate);
             bvMap.put(predicate, bv);
         }
         return bvMap.get(predicate);
 //        System.out.println(ht.printBV(bv));
     }
+
+
 
     public PacketSet and(PacketSet p2){
         return new PacketSet(bdd.ref(bdd.and(this.predicate, p2.predicate)));
@@ -45,6 +49,13 @@ public class PacketSet {
         return new PacketSet(bdd.ref(bdd.not(this.predicate)));
     }
 
+    public PacketSet diff(PacketSet p2){
+        int tmp = bdd.ref(bdd.not(p2.predicate));
+        int ret = bdd.ref(bdd.and(predicate, tmp));
+        bdd.deref(tmp);
+        return new PacketSet(ret);
+    }
+
 //    public BoundingVolume getBv() {
 //        return bv;
 //    }
@@ -57,13 +68,14 @@ public class PacketSet {
         if(this.predicate==1 || ps.predicate == 1) return true;
         if(this.predicate == ps.predicate) return true;
 
-        return  bdd.and(this.predicate, ps.predicate)!=0;
-//        BoundingVolume bv1 = getBoundingVolume(ps.predicate);
-//        BoundingVolume bv2 = getBoundingVolume(this.predicate);
-//        if(bv1.isIntersection(bv2)){
-//            return !this.and(ps).isEmpty();
-//        }
-//        return false;
+//        return  bdd.and(this.predicate, ps.predicate)!=0;
+        BoundingVolume bv1 = getBoundingVolume(ps.predicate);
+        BoundingVolume bv2 = getBoundingVolume(this.predicate);
+
+        if(bv1.isIntersection(bv2)){
+            return !this.and(ps).isEmpty();
+        }
+        return false;
     }
 
     public int getPredicate() {

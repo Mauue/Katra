@@ -21,7 +21,7 @@ public class HeaderType {
     int length;
     int size;
     public HeaderType(){
-        bdd = new BDD(10000, 10000);
+        bdd = new BDD(100000, 500000);
         elementVarIndex = new HashMap<>();
         elementsVar = new HashMap<>();
         forallElement = new HashMap<>();

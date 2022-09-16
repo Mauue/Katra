@@ -74,6 +74,23 @@ public class Loader {
         return res;
 //        nv.nodes.values().forEach(n->System.out.println(n.getSpace()));
     }
+
+    public void readIncrementalSequence(String filename){
+        try {
+            File file = new File(filename);
+            InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                String[] token = line.split(" ");
+                if(token.length >4)
+                    nv.sequences.add(token);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     public long readFibFile(Node node, String filename) {
         List<URule> rules = new LinkedList<>();
         long res = 0;
@@ -98,6 +115,7 @@ public class Loader {
                     URule r;
 //                    PacketSet p = nv.createPrefix("dstip", ip, prefix);
                     if(edge == null) {
+//                        r = new URule(32-prefix, new Edge(node, forward), ip, prefix, nv.getTDelv());
                         r = new URule(32-prefix, node.getSelfEdge(), ip, prefix, nv.getTDelv());
                     }else {
                         r = new URule(32 - prefix, edge, ip, prefix, nv.getTID());

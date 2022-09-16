@@ -5,6 +5,8 @@ import verifier.HeaderStack;
 import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
 
+import java.util.Objects;
+
 public class TSet extends Transformation{
     PacketSet p;
     PacketSet not_p;
@@ -52,5 +54,10 @@ public class TSet extends Transformation{
     public boolean equals(Object obj) {
         if(!this.toString().equals(obj.toString())) return false;
         return p.equals(((TSet)obj).p);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash("set")^Objects.hash(ipPrefix.getIP())^Objects.hash(ipPrefix.getPrefix());
     }
 }

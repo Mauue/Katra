@@ -48,11 +48,10 @@ public class GreenStartTest {
     }
     public void greenStart(){
         for(int i=0;i<times;i++) {
-            System.out.println(i);
+            if(i%10==0)System.out.println(i);
             long t0 = System.nanoTime();
-            HeaderType headerType = init();
+            HeaderType headerType = getHeadetType();
             long t1 = System.nanoTime();
-            System.out.println("init time: " + (t1-t0)/1000000.0);
             Loader loader = new Loader();
             loader.nv.headerType = headerType;
             loader.setTopologyByFile(network+"/" +network + ".topology");
@@ -64,47 +63,54 @@ public class GreenStartTest {
             timeList.add(t+(t1-t0));
             System.gc();
             Node.cnt = 0;
+            PacketSet.bvMap = new HashMap<>(10000);
+        }
+        if(times>1){
+            s1TimeList.remove(0);
+            timeList.remove(0);
         }
         System.out.println("build avg time:" + Utility.avg(s1TimeList)/1000000.0 + "ms");
         System.out.println("avg time:" + Utility.avg(timeList)/1000000.0 + "ms");
     }
 
 
-    static HeaderType init(){
+    static HeaderType getHeadetType(){
         HeaderType headerType = new HeaderType();
         Map<String, Integer> headerSettings = new HashMap<>();
         headerSettings.put("dstip", 32);
-        headerSettings.put("srcip", 32);
-        headerSettings.put("srcport", 16);
-        headerSettings.put("dstport", 16);
-        headerSettings.put("protocol", 8);
+//        headerSettings.put("srcip", 32);
+//        headerSettings.put("srcport", 16);
+//        headerSettings.put("dstport", 16);
+//        headerSettings.put("protocol", 8);
 //        headerSettings.put("ttl", 8);
         headerType.update(headerSettings);
         return headerType;
     }
     static long verification(NetworkVerifier nv){
+        PacketSet.networkVerifier = nv;
         long s1 = System.nanoTime();
         nv.calInitPEC();
         long m = System.nanoTime();
 //        System.out.println(nv.getPecs());
-//        nv.nodes.values().forEach(Node::updateSpacePEC);
-//        List<Check> checks = new LinkedList<>();
-//        for(Node src: nv.nodes.values()) {
-////            System.out.println(src.getSpacePEC());
-//            for(Node dst: nv.nodes.values()) {
-//                if(src.equals(dst)) continue;
-//                for(PacketSet pec: nv.getPecs()) {
-//                    checks.clear();
-//                    checks.add(new ReachabilityCheck(nv.allHeaders(), dst, nv));
-//                    List<Trace> trace = nv.checkProperty(pec, Collections.singletonList(src), checks);
-////                    System.out.println(src + " --> " + dst + " trace:");
-////                    if(trace != null)
-////                        trace.print();
-////                    else
-////                        System.out.println("null");
-//                }
-//            }
-//        }
+        nv.nodes.values().forEach(Node::updateSpacePEC);
+        List<Check> checks = new LinkedList<>();
+        for(Node src: nv.nodes.values()) {
+//            System.out.println(src.getSpacePEC());
+            for(Node dst: nv.nodes.values()) {
+                if(src.equals(dst)) continue;
+//                for(PacketSet pec: src.getSpacePEC()) {
+                for(PacketSet pec: src.getSpacePEC()) {
+                    checks.clear();
+                    checks.add(new ReachabilityCheck(nv.allHeaders(), dst, nv));
+                    List<Trace> trace = nv.checkProperty(pec, Collections.singletonList(src), checks);
+//                    System.out.println(src + " --> " + dst + " trace:");
+//                    if(trace != null)
+//                        trace.print();
+//                    else
+//                        System.out.println("null");
+                }
+            }
+        }
         long s2 = System.nanoTime();
         s1TimeList.add(m-s1);
         return s2-s1;

@@ -6,7 +6,7 @@ import verifier.HeaderStack;
 import java.util.Objects;
 
 public class TPop extends Transformation{
-    TPop(NetworkVerifier nv) {
+    public TPop(NetworkVerifier nv) {
         super(nv);
     }
 
@@ -22,5 +22,15 @@ public class TPop extends Transformation{
     @Override
     public String toString() {
         return "T-pop";
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return Objects.equals(obj.getClass(), this.getClass());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash("pop");
     }
 }

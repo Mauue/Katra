@@ -18,7 +18,7 @@ public class NetworkVerifier {
     Map<Behaviors, PacketSet> predMap;
     Map<PacketSet, Behaviors> behaviorMap;
 
-
+    public List<String[]> sequences;
     public NetworkVerifier(){
         nodes = new HashMap<>();
         rules = new LinkedList<>();
@@ -27,6 +27,7 @@ public class NetworkVerifier {
         pecs = new HashSet<>();
         edges = new LinkedList<>();
         uRules = new LinkedList<>();
+        sequences = new ArrayList<>();
     }
 
     public PacketSet createRange(Map<String, Range> r){
@@ -103,13 +104,13 @@ public class NetworkVerifier {
     }
 
 
-    public Transformation getTID() {return TId.getTId(this);}
+    public Transformation getTID() {return new TId(this);}
     public Transformation getTPop(){
-        return TPop.getTPop(this);
+        return new TPop(this);
     }
 
     public Transformation getTDrop(){
-        return TDrop.getTDrop(this);
+        return new TDrop(this);
     }
 
     public Transformation getTTtl(){
@@ -117,10 +118,10 @@ public class NetworkVerifier {
     }
 
     public Transformation getTDelv(){
-        return TDelv.getTDelv(this);
+        return new TDelv(this);
     }
     public Transformation getTPush(){
-        return TPush.getTPush(this);
+        return new TPush(this);
     }
 
     public Transformation getTSet(PacketSet p){
@@ -141,17 +142,14 @@ public class NetworkVerifier {
         return behaviors.get(u.uid);
     }
 
-    public Violation addRule(Rule rule){
-//        Violation v = new Violation(rule);
-        rules.add(rule);
-        return null;
+    public void addRule(Rule rule){
+//        rules.add(rule);
+        Changes changes = new Changes();
+        this.identifyChangesInsert(rule, changes);
     }
 
     public void addRules(Rule... rule){
-//        Violation v = new Violation(rule);
         rules.addAll(Arrays.asList(rule));
-//        for(Rule r: rules)
-//            System.out.println(r);
     }
     public void addURules(List<URule> rs){
         uRules.addAll(rs);
@@ -164,8 +162,8 @@ public class NetworkVerifier {
     }
     static Comparator<Rule> comp = (Rule lhs, Rule rhs) -> {
         // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
-        if (lhs.getPriority() > rhs.getPriority()) return -1;
-        if (lhs.getPriority() < rhs.getPriority()) return 1;
+        if (lhs.getPriority() > rhs.getPriority()) return 1;
+        if (lhs.getPriority() < rhs.getPriority()) return -1;
 
         if (lhs.getDstIp() > rhs.getDstIp()) return -1;
         if (lhs.getDstIp() < rhs.getDstIp()) return 1;
@@ -196,8 +194,8 @@ public class NetworkVerifier {
     }
     public void calInitPEC(){
         long t1 = System.nanoTime();
-//        updateSpace();
-//        Transformation.updateAll();
+        updateSpace();
+        Transformation.updateAll();
         updateRule();
 
         initializeModelAndRules();
@@ -209,8 +207,8 @@ public class NetworkVerifier {
         long t2 = System.nanoTime();
         update2(changes);
         long t3 = System.nanoTime();
-        System.out.println("model rule time " + (t2-t1)/1000000.0 + " ms");
-        System.out.println("update time " + (t3-t2)/1000000.0 + " ms");
+//        System.out.println("model rule time " + (t2-t1)/1000000.0 + " ms");
+//        System.out.println("update time " + (t3-t2)/1000000.0 + " ms");
 
     }
 
@@ -232,9 +230,7 @@ public class NetworkVerifier {
 
     public void update2(Changes changes){
         changes.aggrBDDs();
-        int count = 0;
         for (Map.Entry<PacketSet, ArrayList<Pair<Behavior, Behavior>>> entryI : changes.getAll().entrySet()) {
-            count++;
 //            System.out.println(change);
             Set<Behaviors> deletion = new HashSet<>();
             Behavior filterBehavior = entryI.getValue().get(0).getFirst();
@@ -270,13 +266,12 @@ public class NetworkVerifier {
             }
 
             for (Behaviors t : deletion) {
-                if (predMap.containsKey(t) && predMap.get(t).isEmpty()) predMap.remove(t);
+                if (    predMap.get(t).isEmpty()) predMap.remove(t);
             }
         }
         changes.releaseBdd();
         predMap.forEach((k, v)-> {behaviorMap.put(v, k); pecs.add(v);});
 //        System.out.println(predMap.size());
-        System.out.println(count);
     }
 
     public List<Trace> checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){
@@ -347,7 +342,8 @@ public class NetworkVerifier {
             if (rule.isPriorityThan(r)) {
                 PacketSet intersection = r.getHit().and(rule.getHit());
                 if(intersection.isEmpty()) continue;
-                if (!r.hasSameForwardingBehavior(rule)) changes.add(intersection, r.getBehavior(), rule.getBehavior());
+                if (!r.hasSameForwardingBehavior(rule))
+                    changes.add(intersection, r.getBehavior(), rule.getBehavior());
 
                 PacketSet tmp = intersection.not();
                 PacketSet newHit = r.getHit().and(tmp);
@@ -358,6 +354,41 @@ public class NetworkVerifier {
                 r.setHit(newHit);
             }
         }
+    }
+
+    public void identifyChangesRemove(Rule rule, Changes changes) {
+//        Trie targetNode = (TrieRules)this.deviceToRules.get(rule.getDevice());
+        Node targetNode = rule.getNode();
+        ArrayList<Rule> sorted = targetNode.getAllUntil(rule);
+        Comparator<Rule> comp = (lhs, rhs) -> rhs.getPriority() - lhs.getPriority();
+        sorted.sort(comp);
+        Iterator var5 = sorted.iterator();
+
+        while(var5.hasNext()) {
+            Rule r = (Rule)var5.next();
+            if (r.getPriority() < rule.getPriority()) {
+                PacketSet intersection = r.getMatch().and(rule.getHit());
+                PacketSet newHit = r.getHit().or(intersection);
+                r.getHit().release();
+                r.setHit(newHit);
+                newHit = rule.getHit().diff(intersection);
+                rule.getHit().release();
+                rule.setHit(newHit);
+                if (!intersection.isEmpty() && r.getBehavior() != rule.getBehavior()) {
+                    changes.add(intersection, rule.getBehavior(), r.getBehavior());
+                } else {
+                    intersection.release();
+                }
+            }
+
+            if (rule.getHit().isEmpty()) {
+                break;
+            }
+        }
+
+//        targetNode.remove(rule);
+        rule.getMatch().release();
+        rule.getHit().release();
     }
     private boolean hasLoop(VNode u, Collection<VNode> visited){
         Collection<VNode> collection = new HashSet<>();

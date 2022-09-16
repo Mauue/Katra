@@ -6,11 +6,7 @@ import verifier.HeaderStack;
 import java.util.Objects;
 
 public class TId extends Transformation{
-
-    public static TId getTId(NetworkVerifier nv){
-        return new TId(nv);
-    }
-    TId(NetworkVerifier nv) {
+    public TId(NetworkVerifier nv) {
         super(nv);
     }
 
@@ -21,11 +17,16 @@ public class TId extends Transformation{
 
     @Override
     public boolean equals(Object obj) {
-        return Objects.equals(obj.toString(), this.toString());
+        return Objects.equals(obj.getClass(), this.getClass());
     }
 
     @Override
     public String toString() {
         return "T-id";
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash("id");
     }
 }

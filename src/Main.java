@@ -4,6 +4,8 @@ import edu.sysu.pmglab.commandParser.CommandParser;
 import parser.MainParser;
 import test.GreenStartTest;
 
+import java.util.Arrays;
+
 public class Main {
     public static void main(String[] args) {
         if(args.length < 1){
@@ -17,7 +19,7 @@ public class Main {
             System.out.println(MainParser.getParser());
             return;
         }
-
+        System.out.println(Arrays.toString(args));
         switch (runner){
             case "greenstart":{
                 GreenStartTest.instance

@@ -21,6 +21,15 @@ public class Edge {
         this.isSelf = begin == end;
     }
 
+    public Edge(Node begin, String end){
+        this.begin = begin;
+        this.end = null;
+        this.nv = begin.getNv();
+        this.name = begin.getName() + "->" + end;
+
+        this.isSelf = false;
+    }
+
     public Edge(Node begin, String port1, Node end, String port2){
         this.begin = begin;
         this.end = end;
