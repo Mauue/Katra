@@ -6,17 +6,21 @@ import verifier.Node;
 import verifier.Rule;
 import verifier.transformation.Transformation;
 import verifier.util.IPPrefix;
-import verifier.util.PacketSet;
-import verifier.util.URule;
+import verifier.util.Pair;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class Loader {
     public NetworkVerifier nv;
+    public Map<Pair<String, String>, Long> latencyMap;
+
+    public String center;
     public Loader(){
         nv = new NetworkVerifier();
+        latencyMap = new HashMap<>();
     }
 
     public long setTopologyByFile(String filepath){
@@ -92,7 +96,7 @@ public class Loader {
         }
     }
     public long readFibFile(Node node, String filename) {
-        List<URule> rules = new LinkedList<>();
+        List<Rule> rules = new LinkedList<>();
         long res = 0;
         try {
             File file = new File(filename);
@@ -104,22 +108,11 @@ public class Loader {
                 String[] token = line.split("\\s+");
                 if (token[0].equals("fw")) {
                     String forward = "drop"; // 去掉端口名中“.”后的字符
-                    if(token.length > 3){
-                        forward = token[3].split("\\.", 2)[0];
-                    }
-
+                    forward = token[3];
                     long ip = Long.parseLong(token[1]);
                     int prefix = Integer.parseInt(token[2]);
                     long s1 = System.nanoTime();
-                    Edge edge = node.getEdge(forward);
-                    URule r;
-//                    PacketSet p = nv.createPrefix("dstip", ip, prefix);
-                    if(edge == null) {
-//                        r = new URule(32-prefix, new Edge(node, forward), ip, prefix, nv.getTDelv());
-                        r = new URule(32-prefix, node.getSelfEdge(), ip, prefix, nv.getTDelv());
-                    }else {
-                        r = new URule(32 - prefix, edge, ip, prefix, nv.getTID());
-                    }
+                    Rule r = node.parseRule(ip, prefix, forward);
                     rules.add(r);
                     long s2 = System.nanoTime();
                     res += s2-s1;
@@ -128,12 +121,33 @@ public class Loader {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        nv.addURules(rules);
+        nv.addRules(rules);
         return res;
     }
-
+    public void readLatency(String filename){
+        String FIRST_LINE = "Source,City,Distance,Average(ms),%of SOL f/0,min,max,mdev,Last Checked";
+        try {
+            File file = new File(filename);
+            InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String line;
+            line = br.readLine();
+            if(!line.equals(FIRST_LINE)) {
+                Logger.getGlobal().warning("not formal file");
+                return;
+            }
+            latencyMap = new HashMap<>();
+            while ((line = br.readLine()) != null) {
+                String[] token = line.split(",");
+                long latency = (long) Double.parseDouble(token[3])*1000000;
+                latencyMap.put(new Pair<>(token[0], token[1]), latency);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
     public long readTunnelFile(String filename) {
-        List<URule> rules = new LinkedList<>();
+        List<Rule> rules = new LinkedList<>();
         long res = 0;
         try {
             File file = new File(filename);
@@ -151,15 +165,15 @@ public class Loader {
                 IPPrefix targetIP = new IPPrefix(Long.parseLong(token[3]), prefix);
                 long s1 = System.nanoTime();
                 Transformation push = nv.getTSeq(nv.getTPush(), nv.getTSet(targetIP));
-                rules.add(new URule(2, src.getSelfEdge(), matchIP, push));
-                rules.add(new URule(1, dst.getSelfEdge(), targetIP, nv.getTPop()));
+                rules.add(new Rule(2, src.getSelfEdge(), matchIP, push));
+                rules.add(new Rule(1, dst.getSelfEdge(), targetIP, nv.getTPop()));
                 long s2 = System.nanoTime();
                 res += s2-s1;
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        nv.addURules(rules);
+        nv.addRules(rules);
         return res;
     }
     private void addTopology(String d1, String p1, String d2, String p2) {

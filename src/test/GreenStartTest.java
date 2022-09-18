@@ -71,6 +71,7 @@ public class GreenStartTest {
         }
         System.out.println("build avg time:" + Utility.avg(s1TimeList)/1000000.0 + "ms");
         System.out.println("avg time:" + Utility.avg(timeList)/1000000.0 + "ms");
+        System.out.println(PacketSet.count +" " + PacketSet.bvcount + " " + (1-1.0*PacketSet.bvcount/PacketSet.count)*100 + " %");
     }
 
 
@@ -93,24 +94,10 @@ public class GreenStartTest {
         long m = System.nanoTime();
 //        System.out.println(nv.getPecs());
         nv.nodes.values().forEach(Node::updateSpacePEC);
-        List<Check> checks = new LinkedList<>();
-        for(Node src: nv.nodes.values()) {
-//            System.out.println(src.getSpacePEC());
-            for(Node dst: nv.nodes.values()) {
-                if(src.equals(dst)) continue;
-//                for(PacketSet pec: src.getSpacePEC()) {
-                for(PacketSet pec: src.getSpacePEC()) {
-                    checks.clear();
-                    checks.add(new ReachabilityCheck(nv.allHeaders(), dst, nv));
-                    List<Trace> trace = nv.checkProperty(pec, Collections.singletonList(src), checks);
-//                    System.out.println(src + " --> " + dst + " trace:");
-//                    if(trace != null)
-//                        trace.print();
-//                    else
-//                        System.out.println("null");
-                }
-            }
-        }
+//        for(Node node: nv.nodes.values()){
+//            System.out.println(node.getName() + ": " + node.getSpacePEC().size() + "/" + nv.getPecs().size());
+//        }
+        nv.checkAllReachability();
         long s2 = System.nanoTime();
         s1TimeList.add(m-s1);
         return s2-s1;

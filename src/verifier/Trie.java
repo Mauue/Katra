@@ -47,6 +47,18 @@ public class Trie {
         t.explore(ret);
         return ret;
     }
+
+    public void remove(Rule rule) {
+        TrieNode t = this.root;
+
+        long dstIp = rule.ip;
+        for (int i = 0; i < rule.prefix; i++) {
+            long bit = (dstIp >> (31 - i)) & 1;
+            t = t.getNext(bit == 0 ? 0 : 1);
+        }
+
+        if(!t.rules.remove(rule))System.out.println("error remove");
+    }
     private ArrayList<Rule> _addAndGetAllOverlappingWith(Rule rule) {
         ArrayList<Rule> result = new ArrayList<>();
         for(Rule rule1: rules){

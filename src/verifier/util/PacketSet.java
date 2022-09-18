@@ -12,7 +12,8 @@ public class PacketSet {
     int predicate;
     public static BDD bdd;
     public static Map<Integer, BoundingVolume> bvMap = new HashMap<>(100000);
-
+    public static int count =0;
+    public static int bvcount = 0;
     public static NetworkVerifier networkVerifier;
 
     public PacketSet(int predicate){
@@ -67,13 +68,14 @@ public class PacketSet {
         if(this.predicate==0 || ps.predicate == 0) return false;
         if(this.predicate==1 || ps.predicate == 1) return true;
         if(this.predicate == ps.predicate) return true;
-
+//        count++;
 //        return  bdd.and(this.predicate, ps.predicate)!=0;
         BoundingVolume bv1 = getBoundingVolume(ps.predicate);
         BoundingVolume bv2 = getBoundingVolume(this.predicate);
 
         if(bv1.isIntersection(bv2)){
-            return !this.and(ps).isEmpty();
+//            bvcount++;
+            return bdd.hasIntersection(this.predicate, ps.getPredicate());
         }
         return false;
     }

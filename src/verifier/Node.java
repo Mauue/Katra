@@ -109,11 +109,28 @@ public class Node {
         ArrayList<Rule> res = this.rules.getAllOverlappingWith(rule);
         return res;
     }
+
+    public void removeRule(Rule rule){
+        this.rules.remove(rule);
+    }
     public Edge getSelfEdge(){
         if(selfEdge == null){
             selfEdge = nv.getOrAddBiEdge(this, this).getFirst();
         }
         return selfEdge;
+    }
+
+    public Rule parseRule(long ip, int prefix, String forward){
+        forward = forward.split("\\.", 2)[0];
+
+        Edge edge = getEdge(forward);
+        Rule r;
+        if(edge == null) {
+            r = new Rule(32-prefix, getSelfEdge(), ip, prefix, nv.getTDelv());
+        }else {
+            r = new Rule(32 - prefix, edge, ip, prefix, nv.getTID());
+        }
+        return r;
     }
 
     @Override

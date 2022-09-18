@@ -1,6 +1,7 @@
 package verifier;
 
 import verifier.check.Check;
+import verifier.check.ReachabilityCheck;
 import verifier.transformation.*;
 import verifier.transformation.TSet;
 import verifier.util.*;
@@ -12,8 +13,8 @@ public class NetworkVerifier {
     public Map<String, Node> nodes;
     List<Edge> edges;
     List<Rule> rules;
-    List<URule> uRules;
 
+//    Set<Rule> rulesSet;
     Collection<PacketSet> pecs;
     Map<Behaviors, PacketSet> predMap;
     Map<PacketSet, Behaviors> behaviorMap;
@@ -26,8 +27,8 @@ public class NetworkVerifier {
         behaviorMap = new HashMap<>();
         pecs = new HashSet<>();
         edges = new LinkedList<>();
-        uRules = new LinkedList<>();
         sequences = new ArrayList<>();
+
     }
 
     public PacketSet createRange(Map<String, Range> r){
@@ -142,7 +143,7 @@ public class NetworkVerifier {
         return behaviors.get(u.uid);
     }
 
-    public void addRule(Rule rule){
+    public void addDefaultRule(Rule rule){
 //        rules.add(rule);
         Changes changes = new Changes();
         this.identifyChangesInsert(rule, changes);
@@ -151,14 +152,28 @@ public class NetworkVerifier {
     public void addRules(Rule... rule){
         rules.addAll(Arrays.asList(rule));
     }
-    public void addURules(List<URule> rs){
-        uRules.addAll(rs);
-    }
+//    public void addURules(List<URule> rs){
+//        uRules.addAll(rs);
+//    }
     public void addRules(List<Rule> rule){
 //        Violation v = new Violation(rule);
         rules.addAll(rule);
 //        for(Rule r: rules)
 //            System.out.println(r);
+    }
+    public void checkAllReachability(){
+        List<Check> checks = new LinkedList<>();
+        for(Node src: nodes.values()) {
+            for(Node dst: nodes.values()) {
+                if(src.equals(dst)) continue;
+                for(PacketSet pec: dst.getSpacePEC()) {
+                    checks.clear();
+                    checks.add(new ReachabilityCheck(pec, dst, this));
+                    checkProperty(pec, Collections.singletonList(src), checks);
+                    break;
+                }
+            }
+        }
     }
     static Comparator<Rule> comp = (Rule lhs, Rule rhs) -> {
         // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
@@ -184,11 +199,9 @@ public class NetworkVerifier {
         }
     }
     private void updateRule(){
-        if(!uRules.isEmpty()){
-            for(URule uRule: uRules){
-                Rule r = new Rule(uRule.priority, uRule.edge, createPrefix("dstip", uRule.ipPrefix), uRule.modify);
-                r.setPrefixRule(uRule.ipPrefix);
-                rules.add(r);
+        if(!rules.isEmpty()){
+            for(Rule rule: rules){
+                rule.updatePacketSet(createPrefix("dstip", rule.getIPPrefix()));
             }
         }
     }
@@ -220,7 +233,7 @@ public class NetworkVerifier {
             Behavior defaultBehavior = new Behavior(node.selfEdge, getTDrop());
             Rule r = new Rule(Integer.MAX_VALUE, node.selfEdge, allHeaders(), getTDrop());
             r.setPrefixRule(0, 0);
-            this.addRule(r);
+            this.addDefaultRule(r);
             // initializing default rules w/o generating changes
             ports.set(node.uid, defaultBehavior);
         }
@@ -277,7 +290,7 @@ public class NetworkVerifier {
     public List<Trace> checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){
         List<Trace> traces = new LinkedList<>();
         for(Node s: source){
-            List<VNode> visited = new LinkedList<>();
+            List<Node> visited = new LinkedList<>();
             VNode u = new VNode(s, pec, new HeaderStack(this, pec));
             u.previous = null;
             dfs(visited, u, 0, checks, traces);
@@ -286,16 +299,16 @@ public class NetworkVerifier {
         return traces;
     }
 
-    private void dfs(List<VNode> visited, VNode u, int i, List<Check> checks, List<Trace> traces){
+    private void dfs(List<Node> visited, VNode u, int i, List<Check> checks, List<Trace> traces){
         Behavior b = forward(u.getLoc(), u.getEc());
         Edge e = b.e;
         Transformation t = b.t;
         HeaderStack s = t.transform(u.getStack());
 
         if (s == null || e.tgt() == null) {
-            if(satisfyProperty(u, t, checks)){
-                traces.add(u.getTrace());
-            }
+//            if(satisfyProperty(u, t, checks)){
+//                traces.add(u.getTrace());
+//            }
             return;
         }
 
@@ -309,18 +322,18 @@ public class NetworkVerifier {
             VNode v = new VNode(e.tgt(), pec, sp);
             nextHops.add(new Hop(t, v));
         }
-
-        visited.add(u);
+        Set<Node> old = new HashSet<>(visited);
+        visited.add(u.u);
 
         for(Hop hop: nextHops){
             VNode v = hop.u;
             v.setPrevious(new Hop(t, u));
-            if(hasLoop(v, visited))
+            if(hasLoop2(v, old))
                 continue;
 
-            if(!visited.contains(v)){
-                dfs(visited, v, i+1, checks, traces);
-            }
+//            if(!visited.contains(v)){
+            dfs(visited, v, i+1, checks, traces);
+//            }
         }
     }
 
@@ -355,7 +368,25 @@ public class NetworkVerifier {
             }
         }
     }
-
+    public void insertRuleAndUpdate(Rule rule){
+        int index = rules.indexOf(rule);
+        if(index != -1)
+            return;
+        rule.updatePacketSet(createPrefix("dstip", rule.getIPPrefix()));
+        rules.add(rule);
+        Changes changes = new Changes();
+        identifyChangesInsert(rule, changes);
+        update2(changes);
+    }
+    public void removeRuleAndUpdate(Rule rule){
+        int index = rules.indexOf(rule);
+        if(index == -1)
+            return;
+        rule = rules.get(index);
+        Changes changes = new Changes();
+        identifyChangesRemove(rule, changes);
+        update2(changes);
+    }
     public void identifyChangesRemove(Rule rule, Changes changes) {
 //        Trie targetNode = (TrieRules)this.deviceToRules.get(rule.getDevice());
         Node targetNode = rule.getNode();
@@ -386,7 +417,8 @@ public class NetworkVerifier {
             }
         }
 
-//        targetNode.remove(rule);
+        targetNode.removeRule(rule);
+        this.rules.remove(rule);
         rule.getMatch().release();
         rule.getHit().release();
     }
@@ -407,6 +439,30 @@ public class NetworkVerifier {
             c = c.getPrevious().u;
         }
         return false;
+    }
+
+    private boolean hasLoop2(VNode u, Collection<Node> visited){
+        if(!visited.contains(u.u)) return false;
+        return !u.previous.u.u.equals(u.u);
+//        List<Node> seq = new LinkedList<>();
+//        VNode c = u;
+//
+//        while( c != null){
+//            seq.add(c.source);
+//            if(c.previous != null) {
+//                c = c.previous.u;
+//            }else{
+//                break;
+//            }
+//        }
+//        boolean flag = true;
+//        for(int i=seq.size()-1;i>=0;i--){
+//            Node n = seq.get(i);
+//            if(flag&&n.equals(u.source)) continue;
+//            flag = false;
+//            if(n.equals(u.source)) return false;
+//        }
+//        return true;
     }
 
     public Collection<PacketSet> getPecs() {
@@ -445,6 +501,7 @@ public class NetworkVerifier {
         }
         return true;
     }
+
 
     static class VNode{
         Node u;
@@ -492,6 +549,19 @@ public class NetworkVerifier {
                     n = null;
             }
             return t;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            VNode vNode = (VNode) o;
+            return Objects.equals(u, vNode.u) && Objects.equals(pec, vNode.pec) && Objects.equals(headerStack, vNode.headerStack);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(u, pec, headerStack);
         }
     }
 

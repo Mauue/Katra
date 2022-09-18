@@ -3,6 +3,7 @@ import edu.sysu.pmglab.commandParser.CommandItem;
 import edu.sysu.pmglab.commandParser.CommandParser;
 import parser.MainParser;
 import test.GreenStartTest;
+import test.IncrementalTest;
 
 import java.util.Arrays;
 
@@ -21,14 +22,23 @@ public class Main {
         }
         System.out.println(Arrays.toString(args));
         switch (runner){
-            case "greenstart":{
+            case "Greenstart":{
                 GreenStartTest.instance
                         .setNetwork(options.network.value)
                         .setTimes(options.times.value)
                         .isReadTunnelFile(options.tunnel.value)
                         .setTunnelNumber(options.tunnelNum.value)
                         .greenStart();
-            };
+                break;
+            }
+            case "Incremental":{
+                IncrementalTest.instance
+                        .setNetwork(options.network.value)
+                        .isReadTunnelFile(options.tunnel.value)
+                        .setTunnelNumber(options.tunnelNum.value)
+                        .test();
+                break;
+            }
         }
     }
 }

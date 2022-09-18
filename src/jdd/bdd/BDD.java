@@ -338,6 +338,30 @@ public class BDD extends NodeTable {
 	}
 
 	// ---------------------------------------------------------------------
+	public boolean hasIntersection(int u1, int u2) {
+		int ret = hasIntersectionRec(u1,u2);
+		return ret != 0;
+	}
+	private int hasIntersectionRec(int u1, int u2) {
+		// terminal cases
+		if(u1 == u2 || u2 == 1) return u1;
+		if(u1 == 0 || u2 == 0) return 0;
+		if(u1 == 1) return u2;
+
+		int l, h, v = getVar(u1);
+		if(v > getVar(u2)) {v = u1; u1 = u2; u2 = v; v = getVar(u1);	}
+
+		if( v == getVar(u2)) {
+			l = hasIntersectionRec(getLow(u1), getLow(u2));
+			if(l != 0) return l;
+			h = hasIntersectionRec(getHigh(u1), getHigh(u2));
+		} else { // v < getVar(u2)
+			l = hasIntersectionRec(getLow(u1), u2);
+			if(l != 0) return l;
+			h = hasIntersectionRec(getHigh(u1), u2);
+		}
+		return h;
+	}
 	/**
 	 * binary AND.
 	 * @see #or

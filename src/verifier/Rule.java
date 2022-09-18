@@ -5,6 +5,8 @@ import verifier.util.Behavior;
 import verifier.util.IPPrefix;
 import verifier.util.PacketSet;
 
+import java.util.Objects;
+
 public class Rule {
     int priority;
     Edge edge;
@@ -42,13 +44,33 @@ public class Rule {
         this.behavior = new Behavior(e, t);
         this.notMatch = match.not();
     }
-
+    public Rule(int priority, Edge e, long ip, int prefix, Transformation t){
+        this.ip = ip;
+        this.prefix = prefix;
+        isPrefix = true;
+        this.edge = e;
+        this.modify = t;
+        this.behavior = new Behavior(e, t);
+    }
+    public Rule(int priority, Edge e, IPPrefix ipPrefix, Transformation t){
+        this.ip = ipPrefix.getIP();
+        this.prefix = ipPrefix.getPrefix();
+        isPrefix = true;
+        this.edge = e;
+        this.modify = t;
+        this.behavior = new Behavior(e, t);
+    }
     public Rule(int p, Edge e, PacketSet match, Transformation t, long ip){
         this(p, e, match, t);
         this.ip = ip;
         isPrefix = true;
     }
 
+    public void updatePacketSet(PacketSet match){
+        this.match = match;
+        this.hit = match;
+        this.notMatch = match.not();
+    }
     public Edge getEdge() {
         return edge;
     }
@@ -79,6 +101,9 @@ public class Rule {
         return priority;
     }
 
+    public IPPrefix getIPPrefix(){
+        return new IPPrefix(ip, prefix);
+    }
     public long getDstIp(){
         if(isPrefix){
             return ip;
@@ -108,5 +133,18 @@ public class Rule {
                 ", " + match +
                 ", " + modify +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Rule rule = (Rule) o;
+        return ip == rule.ip && prefix == rule.prefix && edge.equals(rule.edge) && modify.equals(rule.modify);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ip, prefix);
     }
 }
