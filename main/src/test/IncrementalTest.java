@@ -36,10 +36,9 @@ public class IncrementalTest {
         try {
             Namespace namespace = parser.parseArgs(args);
 
-            GreenStartTest.instance.setNetwork(namespace.getString("network"))
-                    .setTimes(namespace.getInt("times"))
+            IncrementalTest.instance.setNetwork(namespace.getString("network"))
                     .setTunnelNumber(namespace.getInt("tunnel_num"))
-                    .greenStart();
+                    .test();
         } catch (ArgumentParserException e) {
             e.printStackTrace();
         }
@@ -56,7 +55,7 @@ public class IncrementalTest {
 
 
     public void test(){
-        HeaderType headerType = getHeadetType();
+        HeaderType headerType = getHeaderType();
         Loader loader = new Loader();
         IncrementalTest.loader = loader;
         loader.nv.headerType = headerType;
@@ -74,7 +73,7 @@ public class IncrementalTest {
     }
 
 
-    static HeaderType getHeadetType(){
+    static HeaderType getHeaderType(){
         HeaderType headerType = new HeaderType();
         Map<String, Integer> headerSettings = new HashMap<>();
         headerSettings.put("dstip", 32);

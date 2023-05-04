@@ -27,6 +27,7 @@ public class Main {
                 IncrementalTest.incrementalEntry(_args);
             }
         }catch (Exception e){
+            e.printStackTrace();
             System.out.println("Error args!");
         }
     }

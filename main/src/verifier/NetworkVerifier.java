@@ -290,7 +290,7 @@ public class NetworkVerifier {
     public List<Trace> checkProperty(PacketSet pec, Collection<Node> source, List<Check> checks){
         List<Trace> traces = new LinkedList<>();
         for(Node s: source){
-            List<Node> visited = new LinkedList<>();
+            List<VNode> visited = new LinkedList<>();
             VNode u = new VNode(s, pec, new HeaderStack(this, pec));
             u.previous = null;
             dfs(visited, u, 0, checks, traces);
@@ -299,7 +299,7 @@ public class NetworkVerifier {
         return traces;
     }
 
-    private void dfs(List<Node> visited, VNode u, int i, List<Check> checks, List<Trace> traces){
+    private void dfs(List<VNode> visited, VNode u, int i, List<Check> checks, List<Trace> traces){
         Behavior b = forward(u.getLoc(), u.getEc());
         Edge e = b.e;
         Transformation t = b.t;
@@ -322,13 +322,13 @@ public class NetworkVerifier {
             VNode v = new VNode(e.tgt(), pec, sp);
             nextHops.add(new Hop(t, v));
         }
-        Set<Node> old = new HashSet<>(visited);
-        visited.add(u.u);
+        Set<VNode> old = new HashSet<>(visited);
+        visited.add(u);
 
         for(Hop hop: nextHops){
             VNode v = hop.u;
             v.setPrevious(new Hop(t, u));
-            if(hasLoop2(v, old))
+            if(hasLoop(v, old))
                 continue;
 
 //            if(!visited.contains(v)){
@@ -442,27 +442,27 @@ public class NetworkVerifier {
     }
 
     private boolean hasLoop2(VNode u, Collection<Node> visited){
-        if(!visited.contains(u.u)) return false;
-        return !u.previous.u.u.equals(u.u);
-//        List<Node> seq = new LinkedList<>();
-//        VNode c = u;
-//
-//        while( c != null){
-//            seq.add(c.source);
-//            if(c.previous != null) {
-//                c = c.previous.u;
-//            }else{
-//                break;
-//            }
-//        }
-//        boolean flag = true;
-//        for(int i=seq.size()-1;i>=0;i--){
-//            Node n = seq.get(i);
-//            if(flag&&n.equals(u.source)) continue;
-//            flag = false;
-//            if(n.equals(u.source)) return false;
-//        }
-//        return true;
+//        if(!visited.contains(u.u)) return false;
+//        return !u.previous.u.u.equals(u.u);
+        List<Node> seq = new LinkedList<>();
+        VNode c = u;
+
+        while( c != null){
+            seq.add(c.source);
+            if(c.previous != null) {
+                c = c.previous.u;
+            }else{
+                break;
+            }
+        }
+        boolean flag = true;
+        for(int i=seq.size()-1;i>=0;i--){
+            Node n = seq.get(i);
+            if(flag&&n.equals(u.source)) continue;
+            flag = false;
+            if(n.equals(u.source)) return false;
+        }
+        return true;
     }
 
     public Collection<PacketSet> getPecs() {
